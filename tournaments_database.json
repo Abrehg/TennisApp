@@ -1,0 +1,403 @@
+[
+  [
+    "Platform",
+    "Tournament Name",
+    "Tournament Key",
+    "Tournament Surface",
+    "Tournament Promo Name",
+    "Start Date",
+    "End Date",
+    "Tennis Category",
+    "Host nation",
+    "Venue",
+    "Indoor or Outdoor",
+    "Acceptance List",
+    "Average UTR Singles",
+    "Average UTR Doubles",
+    "Average ITF Singles",
+    "Average ITF Doubles",
+    "Flags"
+  ],
+  [
+    "UTR",
+    "BATTLE OF BOCA-PRESENTED BY JASON ZAFIROS – $10,000 Purse + $25K PTT WC – Men's & Women's Open with Doubles + Mix - QUARTERFINALISTS RECEIVE ENTRY FEE BACK (64+ ENTRIES) EARLY REGISTRATION RAFFLE - UTR Tournament",
+    "236211",
+    "Hardcourt",
+    "BATTLE OF BOCA-PRESENTED BY JASON ZAFIROS – $10,000 Purse + $25K PTT WC – Men's & Women's Open with Doubles + Mix - QUARTERFINALISTS RECEIVE ENTRY FEE BACK (64+ ENTRIES) EARLY REGISTRATION RAFFLE - UTR Tournament",
+    "2024-07-27T12:00:00",
+    null,
+    "JT",
+    "United States",
+    "Boca Raton, FL 33498",
+    "N/A",
+    [
+      [
+        "Full Name",
+        "Chinonso Okpara",
+        "Katerina Shabashkevich",
+        "Keaton Hance",
+        "Edgar Vilain",
+        "Isabella Hartung",
+        "Chidimma Okpara",
+        "Jon Gamble",
+        "Gabrielle Dooling",
+        "Nehal Naidoo"
+      ],
+      [
+        "UTR ID",
+        3943896,
+        984027,
+        4213033,
+        455948,
+        2134124,
+        3116959,
+        3155447,
+        3678535,
+        4385305
+      ]
+    ],
+    8.1,
+    7.3,
+    0,
+    0,
+    []
+  ],
+  [
+    "UTR",
+    "Wear a smile and beat the heat UTR extravaganza",
+    "253130",
+    "Hardcourt",
+    "Wear a smile and beat the heat UTR extravaganza",
+    "2024-07-28T13:00:00",
+    null,
+    "JT",
+    "United States",
+    "Oklahoma City, OK 73159",
+    "N/A",
+    [
+      [
+        "Full Name",
+        "Chad Waller 2",
+        "Chris Burns",
+        "Brityn A Waller"
+      ],
+      [
+        "UTR ID",
+        4409687,
+        4548504,
+        4337122
+      ]
+    ],
+    4.25,
+    4.25,
+    0,
+    0,
+    []
+  ],
+  [
+    "UTR",
+    "Stafford Legacy UTR Junior and Open Tennis Tournament",
+    "252024",
+    "Clay",
+    "Stafford Legacy UTR Junior and Open Tennis Tournament",
+    "2024-07-27T13:00:00",
+    null,
+    "JT",
+    "United States",
+    "Philadelphia, PA 19144",
+    "N/A",
+    [
+      [
+        "Full Name",
+        "Rafael Lazrow"
+      ],
+      [
+        "UTR ID",
+        3842147
+      ]
+    ],
+    3,
+    0,
+    0,
+    0,
+    []
+  ],
+  [
+    "UTR",
+    "Pro Open Etapa #29 Copa Kirschbaum - (25 de julio a 28 de Julio)",
+    "250294",
+    "Hardcourt",
+    "Pro Open Etapa #29 Copa Kirschbaum - (25 de julio a 28 de Julio)",
+    "2024-07-25T12:00:00",
+    null,
+    "JT",
+    "Argentina",
+    "Vicente López, Provincia de Buenos Aires B1638",
+    "N/A",
+    [
+      [
+        "Full Name",
+        "Felipe Cotarelo",
+        "Mikail Abuashvili",
+        "José Manuel Lagos",
+        "Facundo Couso",
+        "Lucas Di Cicco"
+      ],
+      [
+        "UTR ID",
+        4617595,
+        4602925,
+        3951803,
+        280568,
+        4311759
+      ]
+    ],
+    2.5,
+    0,
+    0,
+    0,
+    []
+  ],
+  [
+    "UTR",
+    "Charlotte Summer Junior UTR Championships",
+    "250479",
+    "Hardcourt",
+    "Charlotte Summer Junior UTR Championships",
+    "2024-07-27T12:00:00",
+    null,
+    "JT",
+    "United States",
+    "Charlotte, NC 28210",
+    "N/A",
+    [
+      [
+        "Full Name",
+        "Liam Mccall",
+        "Daniel Mobley",
+        "Parker Canning",
+        "Aaron Grunwald",
+        "Jordan Paolini",
+        "Dev Dhanda",
+        "Arabella Grunwald",
+        "Zilin Jia"
+      ],
+      [
+        "UTR ID",
+        4586116,
+        4639480,
+        4586126,
+        4197807,
+        3936166,
+        3315064,
+        4550061,
+        4363319
+      ]
+    ],
+    0.8888888888888888,
+    0,
+    0,
+    0,
+    []
+  ],
+  [
+    "UTR",
+    "UTR Sports College Circuit at Carson Newman (July 25 - 27)",
+    "252055",
+    "N/A",
+    "UTR Sports College Circuit at Carson Newman (July 25 - 27)",
+    "2024-07-26T12:00:00",
+    null,
+    "JT",
+    "United States",
+    "Jefferson City, TN",
+    "N/A",
+    [
+      [
+        "Full Name",
+        "Tamanaco Gamboa"
+      ],
+      [
+        "UTR ID",
+        1259424
+      ]
+    ],
+    0,
+    0,
+    0,
+    0,
+    []
+  ],
+  [
+    "UTR",
+    "San Diego - Summer Junior Circuits Qualifier UTR 1-6.99 (7/28/2024)",
+    "248166",
+    "N/A",
+    "San Diego - Summer Junior Circuits Qualifier UTR 1-6.99 (7/28/2024)",
+    "2024-07-28T19:30:00",
+    null,
+    "JT",
+    "United States",
+    "San Diego, CA 92130",
+    "N/A",
+    [
+      [
+        "Full Name",
+        "Anya Rocha",
+        "Yasmine Grewal",
+        "Gianna Phillips",
+        "Ava Sadeghi",
+        "Kevin Kittler",
+        "Cayden Arlett",
+        "Ajay Wadhwa",
+        "Jeffrey Wang"
+      ],
+      [
+        "UTR ID",
+        4480319,
+        3731752,
+        4483534,
+        4589297,
+        4133985,
+        4178593,
+        4636587,
+        4602929
+      ]
+    ],
+    0.8888888888888888,
+    0.2222222222222222,
+    0,
+    0,
+    []
+  ],
+  [
+    "UTR",
+    "All Levels Junior Circuit Qualifier Red Ball to UTR 4.99 (7/27-7/28)",
+    "210497",
+    "N/A",
+    "All Levels Junior Circuit Qualifier Red Ball to UTR 4.99 (7/27-7/28)",
+    "2024-07-27T13:00:00",
+    null,
+    "JT",
+    "United States",
+    "Southlake, TX 76092",
+    "N/A",
+    [
+      [
+        "Full Name",
+        "Aneela Cama",
+        "Aarohan Sharma",
+        "Veer Modh",
+        "Shalyn  James",
+        "Lucy Botik",
+        "Mira Fox",
+        "Jonathan Martinez",
+        "Riley Chang",
+        "Sophia Lourido",
+        "Emma Crook"
+      ],
+      [
+        "UTR ID",
+        3942186,
+        4467459,
+        3150469,
+        4078891,
+        3514123,
+        4375331,
+        3678807,
+        3058558,
+        4190599,
+        4535843
+      ]
+    ],
+    1.5454545454545454,
+    0.36363636363636365,
+    0,
+    0,
+    []
+  ],
+  [
+    "UTR",
+    "2024 - 806 Championship Tournament",
+    "255130",
+    "N/A",
+    "2024 - 806 Championship Tournament",
+    "2024-07-26T13:00:00",
+    null,
+    "JT",
+    "United States",
+    "Lubbock, TX 79413",
+    "N/A",
+    [
+      [
+        "Full Name",
+        "Justin Miller",
+        "Brooks Bolen"
+      ],
+      [
+        "UTR ID",
+        3839577,
+        4353851
+      ]
+    ],
+    2,
+    3.3333333333333335,
+    0,
+    0,
+    []
+  ],
+  [
+    "UTR",
+    "LEHS Varsity Summer Matchplay",
+    "255026",
+    "Hardcourt",
+    "LEHS Varsity Summer Matchplay",
+    "2024-07-24T12:00:00",
+    null,
+    "JT",
+    "United States",
+    "Little Elm, TX 75068",
+    "N/A",
+    [
+      [
+        "Full Name",
+        "Braylee Castor",
+        "Kevin Mesa",
+        "Tyler Muller",
+        "Sydney Carr",
+        "Adrian Pulido",
+        "Nicholas Brown",
+        "Camryn Crider",
+        "Jaqwan Bailey",
+        "Zaryn Niemi",
+        "Augustus Barba",
+        "Ja'shaude Bailey",
+        "Emerie Sexton",
+        "Jaxon Juett",
+        "Rileigh Morris"
+      ],
+      [
+        "UTR ID",
+        4488492,
+        4488491,
+        4488489,
+        4049347,
+        3720994,
+        4657073,
+        4049353,
+        4656473,
+        3945497,
+        2294949,
+        4169457,
+        4476567,
+        3511320,
+        3679458
+      ]
+    ],
+    1.9333333333333333,
+    1.5333333333333334,
+    0,
+    0,
+    []
+  ]
+]
