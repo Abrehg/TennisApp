@@ -12,7 +12,7 @@ const __dirname = dirname(__filename);
 const path = `${__dirname}/tournaments_database.json`;
 
 // Define Proxy URL
-const proxyUrl = 'http://brd-customer-hl_74a6dbf2-zone-tortue_tennis_testing_01:g4wsac8d9pux@brd.superproxy.io:22225';
+const proxyUrl = 'http://brd-customer-hl_74a6dbf2-zone-tortue_tennis_prod_01:vfkrwksemz8m@brd.superproxy.io:22225';
 
 const saveData = async (jsonData) => {
     try {

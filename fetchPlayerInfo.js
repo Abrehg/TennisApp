@@ -4,6 +4,10 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
 import { HttpsProxyAgent } from 'https-proxy-agent'
+import pkg from 'jssoup';
+import puppeteer from 'puppeteer'
+import https from 'https'
+const JSSoup = pkg.default
 
 // Define Proxy URL
 const proxyUrl = 'http://brd-customer-hl_74a6dbf2-zone-tortue_tennis_testing_01:g4wsac8d9pux@brd.superproxy.io:22225';
@@ -16,6 +20,183 @@ const path = `${__dirname}/players_database.json`;
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+const BROWSER_WS = "wss://brd-customer-hl_74a6dbf2-zone-tortuetennis_scraping_browser1:e5bwjs8j78gf@brd.superproxy.io:9222";
+
+//<div data-v-71ecdf2e-s="" class="v-grid__group-name"><a data-v-71ecdf2e-s="" href="https://tennislink.usta.com/Leagues/Main/StatsAndStandings.aspx?t=R-17&amp;search=1010483655#&amp;&amp;s=4||0||94768||2024">Adult 18 &amp; Over 2024/2024 18 &amp; Over  Mens 4.5</a></div>
+//<button role="link" class="v-authentication-button">SIGN IN</button>
+
+async function listInteractiveElements(page) {
+    const elements = await page.evaluate(() => {
+        const interactiveElements = [];
+        const buttons = document.querySelectorAll('button');
+        const links = document.querySelectorAll('a');
+        const inputs = document.querySelectorAll('input, textarea, select');
+
+        buttons.forEach(button => {
+            interactiveElements.push({
+                tag: 'button',
+                text: button.innerText,
+                class: button.className,
+                role: button.getAttribute('role'),
+                xpath: generateXPath(button),
+            });
+        });
+
+        links.forEach(link => {
+            interactiveElements.push({
+                tag: 'a',
+                text: link.innerText,
+                href: link.href,
+                class: link.className,
+                role: link.getAttribute('role'),
+                xpath: generateXPath(link),
+            });
+        });
+
+        inputs.forEach(input => {
+            interactiveElements.push({
+                tag: input.tagName.toLowerCase(),
+                type: input.type,
+                name: input.name,
+                id: input.id,
+                class: input.className,
+                placeholder: input.placeholder,
+                xpath: generateXPath(input),
+            });
+        });
+
+        return interactiveElements;
+    });
+
+    return elements;
+}
+
+function generateXPath(element) {
+    let xpath = '';
+    while (element) {
+        let tagName = element.tagName.toLowerCase();
+        let siblings = Array.from(element.parentNode.children).filter(e => e.tagName === element.tagName);
+        let nth = siblings.indexOf(element) + 1;
+        nth = siblings.length > 1 ? `:nth-of-type(${nth})` : '';
+        xpath = `${tagName}${nth}${xpath ? ' > ' + xpath : ''}`;
+        element = element.parentNode;
+    }
+    return xpath;
+}
+
+async function getPlayerPlayHistoryUSTA(ID){
+
+    const agent = new HttpsProxyAgent(proxyUrl)
+
+    let url = 'https://www.usta.com/en/home/play/player-search/profile.html#uaid=' + ID
+
+    let tournaments = []
+
+    try {
+        const browser = await puppeteer.launch({
+            browserWSEndpoint: BROWSER_WS,
+          });
+        const page = await browser.newPage();
+        await page.goto('https://www.usta.com/en/home.html', { waitUntil: 'networkidle2' });
+
+        console.log("Started waiting for body to load")
+
+        // Wait for entire page to load
+        await page.waitForSelector('body', { timeout: 10000 });
+
+        const elements = await listInteractiveElements(page);
+        console.log('Interactive Elements:', elements);
+
+        await page.screenshot({ path: '/Users/adityaasuratkal/Downloads/debug-screenshot.png', fullPage: true });
+        const htmlContent = await page.content();
+        console.log(htmlContent);
+        console.log('Current URL:', page.url());
+
+    //     const signInButtonXPath = "//button[contains(@class, 'v-authentication-button')]"; // Replace with correct XPath if needed
+    // try {
+    //     await page.waitForXPath(signInButtonXPath, { timeout: 60000 });
+    //     const signInButton = await page.$x(signInButtonXPath);
+    //     if (signInButton.length > 0) {
+    //         await signInButton[0].click();
+    //         console.log('Sign-in button clicked!');
+    //     } else {
+    //         console.error('Sign-in button not found!');
+    //     }
+    // } catch (error) {
+    //     console.error('Sign-in button not found:', error.message);
+    //     await browser.close();
+    //     return;
+    // }
+
+    //     try {
+    //         await page.waitForSelector('button.v-authentication-button', { timeout: 60000 });
+    //         console.log('Sign-in button found!');
+    //     } catch (error) {
+    //         console.error('Sign-in button not found:', error.message);
+    //         await browser.close();
+    //         return;
+    //     }
+
+    //     console.log("About to click sign in button")
+
+    //     // Click the sign-in button
+    //     await page.click('button.v-authentication-button');
+
+    //     console.log("Clicked sign in button")
+
+    //     // Optional: Wait for navigation if clicking the button leads to a new page
+    //     await page.waitForNavigation({ waitUntil: 'networkidle2' });
+
+    //     console.log("Started waiting for sign in form")
+
+    //     // Wait for the login form fields to appear
+    //     await page.waitForSelector('#signInFormUsername');
+    //     await page.waitForSelector('#signInFormPassword');
+    //     await page.waitForSelector('input[name="signInSubmitButton"]');
+
+    //     // Fill in the username and password
+    //     await page.type('#signInFormUsername', 'adityaasuratkal@gmail.com');
+    //     await page.type('#signInFormPassword', 'AdiS-10293847');
+
+    //     // Click the submit button
+    //     await page.click('input[name="signInSubmitButton"]');
+
+    //     console.log("Entered sign in information")
+
+    //     // Wait for navigation after login
+    //     await page.waitForNavigation({ waitUntil: 'networkidle2' });
+
+    //     // Go to relevant page
+    //     await page.goto(url + '&tab=results', { waitUntil: 'networkidle2' });
+
+    //     console.log("Recieving page content")
+
+    //     // Get the page content
+    //     const html = await page.content();
+
+    //     // Parse the HTML using JSSoup
+    //     const soup = new JSSoup(html);
+    //     console.log(soup.prettify());
+
+    //     // Example: Get the title of the page
+    //     const title = soup.find('title').getText();
+    //     console.log(`Title of the page: ${title}`);
+
+    //     let results = soup.findAll('div', 'v-grid__group-name')
+
+    //     await browser.close();
+    } catch (error) {
+        console.error('Error:', error.message);
+
+        await browser.close();
+    }
+
+    return tournaments
+}
+
+// let data = await getPlayerPlayHistoryUSTA('2010845482')
+// console.log(data)
 
 async function updateDatabaseEntriesPlayers(){
     let database = await loadDatabasePlayers()
@@ -85,13 +266,13 @@ async function updateDatabaseEntriesPlayers(){
     await saveDatabasePlayers(database)
 }
 
-// // Fetch player history USTA
-// const agent = new HttpsProxyAgent(proxyUrl)
+// Fetch player history USTA
+const agent = new HttpsProxyAgent(proxyUrl)
 // let data = await fetch("https://services.usta.com/v1/dataexchange/playhistory", {
 //     "headers": {
 //       "accept": "application/json, text/plain, */*",
 //       "accept-language": "en-US,en;q=0.9",
-//       "authorization": "Bearer eyJraWQiOiJseXN3RVFyMk41Z1ZzZ3RYckF0RmVtMmdhV0dcL3lzNXFONGJueGxUQ2Y4TT0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI3MjhkNjdhMS1iMjUyLTRmZjItYWNjMC0yZWQyM2EwOTcxNmIiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAudXMtZWFzdC0xLmFtYXpvbmF3cy5jb21cL3VzLWVhc3QtMV9zdUd0NmViSkQiLCJ2ZXJzaW9uIjoyLCJjbGllbnRfaWQiOiIyNHZpOHJ0amR2ZzUwMGJldGIyNTg1dXE3dCIsImV2ZW50X2lkIjoiMDc3NTFhZjItOThjNi00NGQwLTllMmYtMGUyODI4MjM3YTBjIiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhcGktY29tbWVyY2VcL3BheW1lbnQ6cmVhZCBhcGktY3VzdG9tZXJcL2N1c3RvbWVyOmNyZWF0ZSBhcGktc2FmZXNwb3J0XC9jb3Vyc2V3b3JrOndyaXRlIGFwaS1jb2duaXRvLWFkbWluXC9jYWxsYmFjay51cmw6cmVhZCBhcGktY3VzdG9tZXJcL3BsYXllcjp1bmJvdW5kOnJlYWQgYXBpLWN1c3RvbWVyXC9wcm92aWRlcjpyZWFkIGFwaS1yYXRpbmdzXC9jb21wZXRpdGlvbjp1cGRhdGUgYXBpLWN1c3RvbWVyXC9jdXN0b21lci5tZW1iZXJzaGlwLmZhbWlseTpyZWFkIGFwaS1jdXN0b21lclwvc3VzcGVuc2lvbjpyZWFkIGFwaS1mYWNpbGl0eVwvZmFjaWxpdHk6Y3JlYXRlIGFwaS1jdXN0b21lclwvY3VzdG9tZXI6cmVhZCBhcGktY3VzdG9tZXJcL2lkZW50aXR5OnVwZGF0ZSBhcGktcHJvZ3JhbVwvcHJvZ3JhbTpkZWxldGVfdW5ib3VuZCBhcGktY3VzdG9tZXJcL2N1c3RvbWVyOnVwZGF0ZSBhcGktY29tbWVyY2VcL3BheW1lbnQ6cGVyZm9ybSBhcGktY29tbW9uXC9yZWZlcmVuY2UuZGF0YTpyZWFkIGFwaS1jdXN0b21lclwvY3VzdG9tZXIucHJvZ3JhbTptYW5hZ2UgYXBpLWZhY2lsaXR5XC9mYWNpbGl0eTpyZWFkX3VuYm91bmQgYXBpLWN1c3RvbWVyXC9wbGF5ZXI6dXBkYXRlIGFwaS1jdXN0b21lclwvc2NoZWR1bGU6cmVhZCBhcGktb3JnYW5pemF0aW9uXC9vcmdhbml6YXRpb246Y3JlYXRlX3VwZGF0ZSBhcGktcmFua2luZ3NcL3Jhbmtpbmc6cmVhZCBhcGktcmF0aW5nc1wvY29hY2g6cmVhZF91cGRhdGUgYXBpLWN1c3RvbWVyXC9wbGF5aGlzdG9yeTpyZWFkX3VuYm91bmQgYXdzLmNvZ25pdG8uc2lnbmluLnVzZXIuYWRtaW4gYXBpLXByb2dyYW1cL3Byb2dyYW06Y3JlYXRlX3VuYm91bmQgb3BlbmlkIGFwaS1vcmdhbml6YXRpb25cL29yZ2FuaXphdGlvbjpyZWFkIHByb2ZpbGUgYXBpLWN1c3RvbWVyXC9wbGF5aGlzdG9yeTpyZWFkIGFwaS1jdXN0b21lclwvc2NoZWR1bGU6cmVhZF91bmJvdW5kIGFwaS1jb21tZXJjZVwvb3JkZXI6cmVhZF91cGRhdGUgYXBpLXNhZmVzcG9ydFwvY291cnNld29yazpyZWFkIGFwaS1wcm9ncmFtXC9wcm9ncmFtOnVwZGF0ZV91bmJvdW5kIGFwaS1yYW5raW5nc1wvcmFua2luZzpyZWFkX3VuYm91bmQgYXBpLWN1c3RvbWVyXC9wbGF5ZXI6cmVhZCBhcGktcHJvZ3JhbVwvcHJvZ3JhbTpyZWFkX3VuYm91bmQiLCJhdXRoX3RpbWUiOjE3MjE2NzY4NjUsImV4cCI6MTcyMTg0MjYxMCwiaWF0IjoxNzIxODM5MDEwLCJqdGkiOiIyY2NkYjg0NS1iYmQ3LTRhOGUtODM5NC1kYWRmM2Y1ZTU5YzIiLCJ1c2VybmFtZSI6IjcyOGQ2N2ExLWIyNTItNGZmMi1hY2MwLTJlZDIzYTA5NzE2YiJ9.l6vIq9VnQ1Sero1Riz00ve7j-FY95c79pXga_jW0OvyltLhAFx8OFrcJ6XTHY7M-Ogg0IBr53zGOtJzNLBWfB2AP_DefwfbzRomtjfqxxiS_Jr-qOySjRDh3A35vGQLcxac1uQ1uJH3V-WDd6Ka2rrDa_lbAOes4CKijf7Rwz8cn5o8WD5MBJNNlEJDu451gFx4hTFlKOrBarYCQOcF5xA78_L3e2dH8ItnWJUvHYPLX0hdFHJ47VyPD03CEV4nk1dAnsvMqSb21y7iFGpJfclvf9Oj1_LqQY-VY9sy-B31ATjPtT3os3xV94-QBLtLe4oULl-wu9TEqgUzRKq6C-w",
+//       //"authorization": "Bearer eyJraWQiOiJseXN3RVFyMk41Z1ZzZ3RYckF0RmVtMmdhV0dcL3lzNXFONGJueGxUQ2Y4TT0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI3MjhkNjdhMS1iMjUyLTRmZjItYWNjMC0yZWQyM2EwOTcxNmIiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAudXMtZWFzdC0xLmFtYXpvbmF3cy5jb21cL3VzLWVhc3QtMV9zdUd0NmViSkQiLCJ2ZXJzaW9uIjoyLCJjbGllbnRfaWQiOiIyNHZpOHJ0amR2ZzUwMGJldGIyNTg1dXE3dCIsImV2ZW50X2lkIjoiZmIxYzcyY2UtZGUxMy00YjU0LWExZDctYzE0NDhhNTFmZmU2IiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhcGktY29tbWVyY2VcL3BheW1lbnQ6cmVhZCBhcGktY3VzdG9tZXJcL2N1c3RvbWVyOmNyZWF0ZSBhcGktc2FmZXNwb3J0XC9jb3Vyc2V3b3JrOndyaXRlIGFwaS1jb2duaXRvLWFkbWluXC9jYWxsYmFjay51cmw6cmVhZCBhcGktY3VzdG9tZXJcL3BsYXllcjp1bmJvdW5kOnJlYWQgYXBpLWN1c3RvbWVyXC9wcm92aWRlcjpyZWFkIGFwaS1yYXRpbmdzXC9jb21wZXRpdGlvbjp1cGRhdGUgYXBpLWN1c3RvbWVyXC9jdXN0b21lci5tZW1iZXJzaGlwLmZhbWlseTpyZWFkIGFwaS1jdXN0b21lclwvc3VzcGVuc2lvbjpyZWFkIGFwaS1mYWNpbGl0eVwvZmFjaWxpdHk6Y3JlYXRlIGFwaS1jdXN0b21lclwvY3VzdG9tZXI6cmVhZCBhcGktY3VzdG9tZXJcL2lkZW50aXR5OnVwZGF0ZSBhcGktcHJvZ3JhbVwvcHJvZ3JhbTpkZWxldGVfdW5ib3VuZCBhcGktY3VzdG9tZXJcL2N1c3RvbWVyOnVwZGF0ZSBhcGktY29tbWVyY2VcL3BheW1lbnQ6cGVyZm9ybSBhcGktY29tbW9uXC9yZWZlcmVuY2UuZGF0YTpyZWFkIGFwaS1jdXN0b21lclwvY3VzdG9tZXIucHJvZ3JhbTptYW5hZ2UgYXBpLWZhY2lsaXR5XC9mYWNpbGl0eTpyZWFkX3VuYm91bmQgYXBpLWN1c3RvbWVyXC9wbGF5ZXI6dXBkYXRlIGFwaS1jdXN0b21lclwvc2NoZWR1bGU6cmVhZCBhcGktb3JnYW5pemF0aW9uXC9vcmdhbml6YXRpb246Y3JlYXRlX3VwZGF0ZSBhcGktcmFua2luZ3NcL3Jhbmtpbmc6cmVhZCBhcGktcmF0aW5nc1wvY29hY2g6cmVhZF91cGRhdGUgYXBpLWN1c3RvbWVyXC9wbGF5aGlzdG9yeTpyZWFkX3VuYm91bmQgYXdzLmNvZ25pdG8uc2lnbmluLnVzZXIuYWRtaW4gYXBpLXByb2dyYW1cL3Byb2dyYW06Y3JlYXRlX3VuYm91bmQgb3BlbmlkIGFwaS1vcmdhbml6YXRpb25cL29yZ2FuaXphdGlvbjpyZWFkIHByb2ZpbGUgYXBpLWN1c3RvbWVyXC9wbGF5aGlzdG9yeTpyZWFkIGFwaS1jdXN0b21lclwvc2NoZWR1bGU6cmVhZF91bmJvdW5kIGFwaS1jb21tZXJjZVwvb3JkZXI6cmVhZF91cGRhdGUgYXBpLXNhZmVzcG9ydFwvY291cnNld29yazpyZWFkIGFwaS1wcm9ncmFtXC9wcm9ncmFtOnVwZGF0ZV91bmJvdW5kIGFwaS1yYW5raW5nc1wvcmFua2luZzpyZWFkX3VuYm91bmQgYXBpLWN1c3RvbWVyXC9wbGF5ZXI6cmVhZCBhcGktcHJvZ3JhbVwvcHJvZ3JhbTpyZWFkX3VuYm91bmQiLCJhdXRoX3RpbWUiOjE3MjE4NTYzNzgsImV4cCI6MTcyMzE1NDMyMywiaWF0IjoxNzIzMTUwNzIzLCJqdGkiOiJlZjYxODgwYy1kNmVhLTRkZDUtODc5Yy1mNzc1YTVhNzk4ZjkiLCJ1c2VybmFtZSI6IjcyOGQ2N2ExLWIyNTItNGZmMi1hY2MwLTJlZDIzYTA5NzE2YiJ9.Jd60FYGuZ1vQtXEzqZCx8o6D7xjTF1HE4VJTqwbeobp8h1GjdvOeXS_N0Izw9-h_Lek1TjMzfVi7AmZ9ttK8_fQlqnXWr3jO8OdKhB1WhIReog0d2-W9JM80V8aKlRIiWvqTQ8a5ZSjXtdRndps0B_8myGr9O48-qXCW6U9K2PiC2axKQ8JN0xbhkUVhyH_xi9b2widHqIyAJ5PXujHvzenBlda8Lj8Ugm7mKsgJP6525Wf3xFVa95Aa5vwq06Di2TlKx3PQ2I5k1nEY4nmw_zxxfBFQSGcoS9wzql08WMbEEXzsZPeekNLPuUjIp5IJ8pHGbd8W68e_sYoNmK2E2Q",
 //       "content-type": "application/json",
 //       "sec-ch-ua": "\"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"",
 //       "sec-ch-ua-mobile": "?0",
@@ -100,13 +281,13 @@ async function updateDatabaseEntriesPlayers(){
 //       "sec-fetch-mode": "cors",
 //       "sec-fetch-site": "same-site",
 //       "Referer": "https://www.usta.com/",
-//       "Referrer-Policy": "strict-origin-when-cross-origin"
+//       "Referrer-Policy": "strict-origin-when-cross-origin",
+//       "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
 //     },
 //     "body": "{\"selection\":{\"uaid\":\"2010845482\",\"eventType\":\"ALL\",\"year\":\"all\"},\"pagination\":{\"pageSize\":15,\"currentPage\":1}}",
 //     "method": "POST"
-//     "agent" : agent
-//   });
-// data = await data.json()
+// });
+// data = await data.text()
 // console.log(data)
 
 const saveData = async (jsonData) => {
@@ -283,7 +464,7 @@ async function checkHistoriesUTRUSTA(USTAID, UTRID){
     }
 
     // Get USTA Data
-    let USTAData = []
+    let USTAData = getPlayerPlayHistoryUSTA(USTAID)
 
     console.log("Starting to get UTR data for history verification")
     let UTRData = await fetchDataUTR()
@@ -294,7 +475,7 @@ async function checkHistoriesUTRUSTA(USTAID, UTRID){
     let count = 0
     for(let i = 0; i < UTRData.events.length; i++){
         for(let j = 0; j < USTAData.length; j++){
-            if(UTRData.events[i].name == USTAData[j].tournamentName){
+            if(UTRData.events[i].name == USTAData[j]){
                 count++
             }
         }
@@ -418,7 +599,6 @@ export async function checkAndUpdateDatabasePlayersUTR(Name, UTRID) {
                     item[6] = array[2][1]
                     item[7] = array[3][1]
                     item[2] = ITFIDOut
-                    database.push(item)
                 }
             }
             //If no ITF data, update item and push to database with appropriate flag
@@ -428,7 +608,6 @@ export async function checkAndUpdateDatabasePlayersUTR(Name, UTRID) {
                 item[5] = array[1][1]
                 item[6] = array[2][1]
                 item[7] = array[3][1]
-                database.push(item)
             }
 
             //Get data from USTA
@@ -571,12 +750,73 @@ export async function checkAndUpdateDatabasePlayersUSTA(Name, USTAID){
     }
 }
 
+async function GetPlayerInfoUSTA(firstName, lastName){
+    async function fetchData() {
+        const agent = new HttpsProxyAgent(proxyUrl)
+        try {
+            const response = await fetch("https://services.usta.com/v1/dataexchange/profile/search/public", {
+                "headers": {
+                    "accept": "application/json, text/plain, */*",
+                    "accept-language": "en-US,en;q=0.9",
+                    "content-type": "application/json",
+                    "sec-ch-ua": "\"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"",
+                    "sec-ch-ua-mobile": "?0",
+                    "sec-ch-ua-platform": "\"macOS\"",
+                    "sec-fetch-dest": "empty",
+                    "sec-fetch-mode": "cors",
+                    "sec-fetch-site": "same-site",
+                    "Referer": "https://www.usta.com/",
+                    "Referrer-Policy": "strict-origin-when-cross-origin",
+                    "User-Agent" : "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+                },
+                body: JSON.stringify({
+                    pagination: {
+                        pageSize: "51",
+                        currentPage: "1"
+                    },
+                    selection: {
+                        name: {
+                            fname: firstName,
+                            lname: lastName
+                        }
+                    }
+                }),
+                method: "POST"
+            });
+          
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error fetching player info:', error);
+            throw error;
+        }
+    }
+
+    let data = await fetchData()
+
+    let array = ["ID"]
+
+    if(data.data.length > 0){
+        for(let i = 0; i < data.data.length; i++){
+            array.push(data.data[i].uaid)
+        }
+    }
+
+    return array    
+}
+
+// let dataOut = await GetPlayerInfoUSTA("parker", "schultz")
+// console.log(dataOut)
+
 async function GetPlayerInfoUSTAID(PlayerID){
     async function fetchData() {
         const agent = new HttpsProxyAgent(proxyUrl)
         try {
             const response = await fetch("https://www.usta.com/usta/api?type=playerInfo", {
-                headers: {
+                "headers": {
                     "accept": "application/json, text/plain, */*",
                     "accept-language": "en-US,en;q=0.9",
                     "content-type": "application/json",
@@ -589,7 +829,8 @@ async function GetPlayerInfoUSTAID(PlayerID){
                     "sec-fetch-mode": "cors",
                     "sec-fetch-site": "same-origin",
                     "Referer": "https://www.usta.com/en/home/play/player-search/profile.html",
-                    "Referrer-Policy": "strict-origin-when-cross-origin"
+                    "Referrer-Policy": "strict-origin-when-cross-origin",
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
                 },
                 body: JSON.stringify({
                     selection: {
@@ -618,14 +859,28 @@ async function GetPlayerInfoUSTAID(PlayerID){
     }
     
     let data = await fetchData()
-    return data
+
+    var array = [["Full Name"],["Singles Rating"],["Doubles Rating"],["ID"]];
+
+    if(data.data.length > 0){
+        array[0].push(data.data[0].name)
+        array[3].push(data.data[0].uaid)
+        if(data.data[0].ratings.wtn.length > 0){
+            for(let i = 0; i < data.data[0].ratings.wtn.length; i++){
+                if(data.data[0].ratings.wtn[i].type == "SINGLE"){
+                    array[1].push(data.data[0].ratings.wtn[i].tennisNumber)
+                }
+                if(data.data[0].ratings.wtn[i].type == "DOUBLE"){
+                    array[2].push(data.data[0].ratings.wtn[i].tennisNumber)
+                }
+            }
+        }
+    }
+    
+    return array
 }
 
 // let dataOut = await GetPlayerInfoUSTAID("2018939457")
-// console.log(dataOut)
-// await saveData(dataOut);
-
-// dataOut = await loadData()
 // console.log(dataOut)
 
 // Find UTR for player
@@ -677,6 +932,7 @@ async function GetPlayerInfoUTR(profileName){
     var array = [["Full Name"],["Singles Rating"],["Doubles Rating"],["ID"]];
 
     let data = await fetchData();
+    console.log(data)
     if (data.players.hits.length > 0) {
         if(data.players.hits[0].source.displayName.toLowerCase() == profileName.toLowerCase()){
             array[0].push(data.players.hits[0].source.displayName);
@@ -690,9 +946,9 @@ async function GetPlayerInfoUTR(profileName){
     return array;
 }
 
-let profileNameUTR = 'juan carlos portilla morales'
-let output = await GetPlayerInfoUTR(profileNameUTR)
-console.log(output)
+// let profileNameUTR = 'juan carlos portilla morales'
+// let output = await GetPlayerInfoUTR(profileNameUTR)
+// console.log(output)
 
 // Fetch profile for ITF ranking
 async function GetPlayerInfoITF(profileName, tournCircuitCode){
@@ -722,7 +978,7 @@ async function GetPlayerInfoITF(profileName, tournCircuitCode){
         "referrerPolicy": "no-referrer",
         "body": null,
         "method": "GET",
-        "agent": agent
+        //"agent": agent
     };
 
     async function fetchWithRetry(url, options, retries = 3, backoff = 1000) {
@@ -761,6 +1017,8 @@ async function GetPlayerInfoITF(profileName, tournCircuitCode){
                     console.log(data.players[integer].playedCircuits[index].value)
                     console.log(tournCircuitCode)
                     if(data.players[integer].playedCircuits[index].value == tournCircuitCode){
+                        array[0].push(data.players[integer].FullName)
+                        array[3].push(data.players[integer].playerId)
                         let Id = data.players[integer].playerId;
                         let prefixes = ["JT", "MT", "FT", "VT", "WCT", "BT"]
                         for (const prefix of prefixes) {
@@ -803,7 +1061,7 @@ async function GetPlayerInfoITF(profileName, tournCircuitCode){
 }
 
 // let profileNameITF = 'juan carlos portilla morales'
-// GetPlayerInfoITF(profileNameITF).then(output => {
+// GetPlayerInfoITF(profileNameITF, "JT").then(output => {
 //     console.log(output)
 // });
 
@@ -1005,7 +1263,6 @@ async function GetPlayerInfoITFID(circuitCode,ID){
         "headers": {
             "accept": "*/*",
             "accept-language": "en-US,en;q=0.9",
-            "if-modified-since": "Fri, 12 Jul 2024 15:23:29 GMT",
             "sec-ch-ua": "\"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"",
             "sec-ch-ua-mobile": "?0",
             "sec-ch-ua-platform": "\"macOS\"",
@@ -1015,8 +1272,7 @@ async function GetPlayerInfoITFID(circuitCode,ID){
         },
         "referrerPolicy": "no-referrer",
         "body": null,
-        "method": "GET",
-        "agent": agent
+        "method": "GET"
     };
 
     async function fetchData(URL, opt) {

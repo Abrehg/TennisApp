@@ -11,7 +11,9 @@
   "description": "",
   "type": "module",
   "dependencies": {
+    "jssoup": "^0.0.15",
     "node-fetch": "^3.3.2",
-    "proxy-agent": "^6.4.0"
+    "proxy-agent": "^6.4.0",
+    "puppeteer": "^23.1.0"
   }
 }
