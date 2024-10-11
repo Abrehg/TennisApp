@@ -21,70 +21,7 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const BROWSER_WS = "wss://brd-customer-hl_74a6dbf2-zone-tortuetennis_scraping_browser1:e5bwjs8j78gf@brd.superproxy.io:9222";
-
-//<div data-v-71ecdf2e-s="" class="v-grid__group-name"><a data-v-71ecdf2e-s="" href="https://tennislink.usta.com/Leagues/Main/StatsAndStandings.aspx?t=R-17&amp;search=1010483655#&amp;&amp;s=4||0||94768||2024">Adult 18 &amp; Over 2024/2024 18 &amp; Over  Mens 4.5</a></div>
-//<button role="link" class="v-authentication-button">SIGN IN</button>
-
-async function listInteractiveElements(page) {
-    const elements = await page.evaluate(() => {
-        const interactiveElements = [];
-        const buttons = document.querySelectorAll('button');
-        const links = document.querySelectorAll('a');
-        const inputs = document.querySelectorAll('input, textarea, select');
-
-        buttons.forEach(button => {
-            interactiveElements.push({
-                tag: 'button',
-                text: button.innerText,
-                class: button.className,
-                role: button.getAttribute('role'),
-                xpath: generateXPath(button),
-            });
-        });
-
-        links.forEach(link => {
-            interactiveElements.push({
-                tag: 'a',
-                text: link.innerText,
-                href: link.href,
-                class: link.className,
-                role: link.getAttribute('role'),
-                xpath: generateXPath(link),
-            });
-        });
-
-        inputs.forEach(input => {
-            interactiveElements.push({
-                tag: input.tagName.toLowerCase(),
-                type: input.type,
-                name: input.name,
-                id: input.id,
-                class: input.className,
-                placeholder: input.placeholder,
-                xpath: generateXPath(input),
-            });
-        });
-
-        return interactiveElements;
-    });
-
-    return elements;
-}
-
-function generateXPath(element) {
-    let xpath = '';
-    while (element) {
-        let tagName = element.tagName.toLowerCase();
-        let siblings = Array.from(element.parentNode.children).filter(e => e.tagName === element.tagName);
-        let nth = siblings.indexOf(element) + 1;
-        nth = siblings.length > 1 ? `:nth-of-type(${nth})` : '';
-        xpath = `${tagName}${nth}${xpath ? ' > ' + xpath : ''}`;
-        element = element.parentNode;
-    }
-    return xpath;
-}
-
+//Not working, assume it returns a 2D array of strings
 async function getPlayerPlayHistoryUSTA(ID){
 
     const agent = new HttpsProxyAgent(proxyUrl)
@@ -93,104 +30,6 @@ async function getPlayerPlayHistoryUSTA(ID){
 
     let tournaments = []
 
-    try {
-        const browser = await puppeteer.launch({
-            browserWSEndpoint: BROWSER_WS,
-          });
-        const page = await browser.newPage();
-        await page.goto('https://www.usta.com/en/home.html', { waitUntil: 'networkidle2' });
-
-        console.log("Started waiting for body to load")
-
-        // Wait for entire page to load
-        await page.waitForSelector('body', { timeout: 10000 });
-
-        const elements = await listInteractiveElements(page);
-        console.log('Interactive Elements:', elements);
-
-        await page.screenshot({ path: '/Users/adityaasuratkal/Downloads/debug-screenshot.png', fullPage: true });
-        const htmlContent = await page.content();
-        console.log(htmlContent);
-        console.log('Current URL:', page.url());
-
-    //     const signInButtonXPath = "//button[contains(@class, 'v-authentication-button')]"; // Replace with correct XPath if needed
-    // try {
-    //     await page.waitForXPath(signInButtonXPath, { timeout: 60000 });
-    //     const signInButton = await page.$x(signInButtonXPath);
-    //     if (signInButton.length > 0) {
-    //         await signInButton[0].click();
-    //         console.log('Sign-in button clicked!');
-    //     } else {
-    //         console.error('Sign-in button not found!');
-    //     }
-    // } catch (error) {
-    //     console.error('Sign-in button not found:', error.message);
-    //     await browser.close();
-    //     return;
-    // }
-
-    //     try {
-    //         await page.waitForSelector('button.v-authentication-button', { timeout: 60000 });
-    //         console.log('Sign-in button found!');
-    //     } catch (error) {
-    //         console.error('Sign-in button not found:', error.message);
-    //         await browser.close();
-    //         return;
-    //     }
-
-    //     console.log("About to click sign in button")
-
-    //     // Click the sign-in button
-    //     await page.click('button.v-authentication-button');
-
-    //     console.log("Clicked sign in button")
-
-    //     // Optional: Wait for navigation if clicking the button leads to a new page
-    //     await page.waitForNavigation({ waitUntil: 'networkidle2' });
-
-    //     console.log("Started waiting for sign in form")
-
-    //     // Wait for the login form fields to appear
-    //     await page.waitForSelector('#signInFormUsername');
-    //     await page.waitForSelector('#signInFormPassword');
-    //     await page.waitForSelector('input[name="signInSubmitButton"]');
-
-    //     // Fill in the username and password
-    //     await page.type('#signInFormUsername', 'adityaasuratkal@gmail.com');
-    //     await page.type('#signInFormPassword', 'AdiS-10293847');
-
-    //     // Click the submit button
-    //     await page.click('input[name="signInSubmitButton"]');
-
-    //     console.log("Entered sign in information")
-
-    //     // Wait for navigation after login
-    //     await page.waitForNavigation({ waitUntil: 'networkidle2' });
-
-    //     // Go to relevant page
-    //     await page.goto(url + '&tab=results', { waitUntil: 'networkidle2' });
-
-    //     console.log("Recieving page content")
-
-    //     // Get the page content
-    //     const html = await page.content();
-
-    //     // Parse the HTML using JSSoup
-    //     const soup = new JSSoup(html);
-    //     console.log(soup.prettify());
-
-    //     // Example: Get the title of the page
-    //     const title = soup.find('title').getText();
-    //     console.log(`Title of the page: ${title}`);
-
-    //     let results = soup.findAll('div', 'v-grid__group-name')
-
-    //     await browser.close();
-    } catch (error) {
-        console.error('Error:', error.message);
-
-        await browser.close();
-    }
 
     return tournaments
 }
@@ -290,29 +129,32 @@ const agent = new HttpsProxyAgent(proxyUrl)
 // data = await data.text()
 // console.log(data)
 
-const saveData = async (jsonData) => {
-    try {
-        const dataPath = `${__dirname}/data.json`
-        const dataString = JSON.stringify(jsonData, null, 2); // Convert JSON to string with indentation
-        await fs.promises.writeFile(dataPath, dataString, { encoding: 'utf8' });
-        console.log('Data saved successfully.');
-    } catch (error) {
-        console.error('Error saving data:', error);
-    }
-}
 
-const loadData = async () => {
-    try {
-        const dataPath = `${__dirname}/data.json`
-        const dataString = await fs.promises.readFile(dataPath, { encoding: 'utf8' });
-        const jsonData = JSON.parse(dataString); // Convert string to JSON
-        console.log('Data loaded successfully:');
-        return jsonData;
-    } catch (error) {
-        console.error('Error loading data:', error);
-    }
-}
+//Used for saving and loading locally for testing
+// const saveData = async (jsonData) => {
+//     try {
+//         const dataPath = `${__dirname}/data.json`
+//         const dataString = JSON.stringify(jsonData, null, 2); // Convert JSON to string with indentation
+//         await fs.promises.writeFile(dataPath, dataString, { encoding: 'utf8' });
+//         console.log('Data saved successfully.');
+//     } catch (error) {
+//         console.error('Error saving data:', error);
+//     }
+// }
 
+// const loadData = async () => {
+//     try {
+//         const dataPath = `${__dirname}/data.json`
+//         const dataString = await fs.promises.readFile(dataPath, { encoding: 'utf8' });
+//         const jsonData = JSON.parse(dataString); // Convert string to JSON
+//         console.log('Data loaded successfully:');
+//         return jsonData;
+//     } catch (error) {
+//         console.error('Error loading data:', error);
+//     }
+// }
+
+//Check if player history matches between ITF and UTR
 async function checkHistoriesITFUTR(ITFID, UTRID){
     const agent = new HttpsProxyAgent(proxyUrl)
     let UTRRecURL = "https://api.utrsports.net/v4/player/" + UTRID + "/results?type=s&year=last"
@@ -519,6 +361,7 @@ async function saveDatabasePlayers(database) {
 }
 
 // Function to check and update the database
+// Update function to work with USTA
 export async function checkAndUpdateDatabasePlayersUTR(Name, UTRID) {
     let database = await loadDatabasePlayers()
 
@@ -627,6 +470,7 @@ export async function checkAndUpdateDatabasePlayersUTR(Name, UTRID) {
     return array
 }
 
+//Update to work with USTA
 export async function checkAndUpdateDatabasePlayersITF(Name, ITFID) {
     let database = await loadDatabasePlayers()
 
