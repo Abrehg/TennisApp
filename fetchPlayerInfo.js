@@ -17,7 +17,6 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-
 //Automate updateDatabaseEntriesPlayers(), update path to players database after creating blob storage
 
 //Not working, assume it returns an array of strings
@@ -210,6 +209,7 @@ export async function checkAndUpdateDatabasePlayersUTR(Name, UTRID) {
         array[3].push(0)
         array[4].push(0)
         array[5].push(0)
+        dataFound = false;
 
         if (UTRDataOut[0].length > 1 && UTRDataOut[0][1] == Name) {
             // Get information from UTR
@@ -245,6 +245,7 @@ export async function checkAndUpdateDatabasePlayersUTR(Name, UTRID) {
 
                 //If entry exists, update UTR info and remove no UTR data flag
                 if(ITFrowIndex !== -1){
+                    dataFound = true
                     database[ITFrowIndex][1] = UTRID
                     database[ITFrowIndex][4] = array[0][1]
                     database[ITFrowIndex][5] = array[1][1]
@@ -309,6 +310,7 @@ export async function checkAndUpdateDatabasePlayersUTR(Name, UTRID) {
 
                 //If entry exists, update entry info
                 if(USTArowIndex !== -1){
+                    dataFound = true
                     database[USTArowIndex][1] = UTRID
                     database[USTArowIndex][4] = array[0][1]
                     database[USTArowIndex][5] = array[1][1]
@@ -340,11 +342,15 @@ export async function checkAndUpdateDatabasePlayersUTR(Name, UTRID) {
             }
 
             //Push the final item to database
-            database.push(item)
+            if (dataFound == false){
+                database.push(item)
+            } 
         }
         //If no UTR data, update item and push to database with appropriate flag
         else{
             item[10].push("No UTR Data")
+            item[10].push("No ITF Data")
+            item[10].push("No USTA Data")
             item[4] = array[0][1]
             item[5] = array[1][1]
             item[6] = array[2][1]
@@ -359,12 +365,12 @@ export async function checkAndUpdateDatabasePlayersUTR(Name, UTRID) {
     return array
 }
 
-//Update to work with USTA
+// Function to check and update the database when encountering ITF player
 export async function checkAndUpdateDatabasePlayersITF(Name, ITFID) {
     let database = await loadDatabasePlayers()
 
     // Find the index of the row that contains the UTRID
-    let rowIndex = database.findIndex(row => row[1] === ITFID);
+    let rowIndex = database.findIndex(row => row[2] === ITFID);
 
     let array = [["UTR Singles Rating"], ["UTR Doubles Rating"], ["ITF Singles Rating"], ["ITF Doubles Rating"], ["USTA Singles Rating"], ["USTA Doubles Rating"]]
     console.log("Starting database checking and update")
@@ -380,8 +386,6 @@ export async function checkAndUpdateDatabasePlayersITF(Name, ITFID) {
     } else {
         // If the ID does not exist, append a new row with the name and ID
         let ITFDataOut = await GetPlayerInfoITFID(ITFID);
-        console.log(Name)
-        console.log(ITFDataOut[0][1])
 
         //Initialize objects
         let item = [Name, "NA", ITFID, "NA", 0, 0, 0, 0, 0, 0, []]
@@ -400,14 +404,24 @@ export async function checkAndUpdateDatabasePlayersITF(Name, ITFID) {
             // Add information from UTR
             console.log("Starting to find UTR with matching ITF")
             let UTRDataOut = await GetPlayerInfoUTRmatchingITF(Name, ITFID)
-            console.log("UTR data out")
-            console.log(UTRDataOut)
 
             // Check if UTR data exists, then update entries if it does exist
             if(UTRDataOut[1].length > 1 && UTRDataOut[2].length > 1 && UTRDataOut[3].length > 1){
                 UTRIDOut = UTRDataOut[3][1]
                 array[0][1] = UTRDataOut[1][1]
                 array[1][1] = UTRDataOut[2][1]
+
+                let USTADataOut = GetPlayerInfoUSTAmatchingUTR(Name, UTRIDOut)
+                let USTAID = 0
+                if(USTADataOut[0].length > 1 && USTADataOut[3].length > 1){
+                    if(USTADataOut[1].length > 1){
+                        array[4][1] = USTADataOut[1][1]
+                    }
+                    if(USTADataOut[2].length > 1){
+                        array[5][1] = USTADataOut[2][1]
+                    }
+                    USTAID = USTADataOut[3][1]
+                }
 
                 //Check to see if database entry for player already exists with UTR and no ITF
                 let UTRrowIndex = database.findIndex(row => row[1] === UTRIDOut)
@@ -417,6 +431,19 @@ export async function checkAndUpdateDatabasePlayersITF(Name, ITFID) {
                     database[UTRrowIndex][2] = ITFID
                     database[UTRrowIndex][4] = array[0][1]
                     database[UTRrowIndex][5] = array[1][1]
+
+                    //Add USTA info as well as remove flag
+                    if(USTAID != 0){
+                        database[UTRrowIndex][3] = USTAID
+                        database[UTRrowIndex][8] = array[4][1]
+                        database[UTRrowIndex][9] = array[5][1]
+                        for(let tempIndex = 0; tempIndex < database[UTRrowIndex][10].length; tempIndex++){
+                            if(database[UTRrowIndex][10][tempIndex] == "No USTA Data"){
+                                database[UTRrowIndex][10].splice(tempIndex, 1)
+                            }
+                        }
+                    }
+
                     if(array[0][1] !== 0 && array[1][1] !== 0){
                         for(let tempIndex = 0; tempIndex < database[UTRrowIndex][8].length; tempIndex++){
                             if(database[UTRrowIndex][8][tempIndex] == "No UTR Data"){
@@ -425,29 +452,44 @@ export async function checkAndUpdateDatabasePlayersITF(Name, ITFID) {
                         }
                     }
                 }
+
                 //Otherwise create new entry and push to database
                 else{
                     item[4] = array[0][1]
                     item[5] = array[1][1]
                     item[6] = array[2][1]
                     item[7] = array[3][1]
+                    item[8] = array[4][1]
+                    item[9] = array[5][1]
                     item[1] = UTRIDOut
+                    if(USTAID != 0){
+                        item[3] = USTAID
+                    }
+                    else{
+                        item[10].push("No USTA Data")
+                    }
                     database.push(item)
                 }
             }
             // Add flag if UTR data doesn't exist
             else{
                 item[10].push("No UTR Data")
+                item[10].push("No USTA Data")
                 item[4] = array[0][1]
                 item[5] = array[1][1]
                 item[6] = array[2][1]
                 item[7] = array[3][1]
+                item[8] = array[4][1]
+                item[9] = array[5][1]
                 database.push(item)
             }
         }
 
+        //If no ITF data, update flags
         else{
+            item[10].push("No UTR Data")
             item[10].push("No ITF Data")
+            item[10].push("No USTA Data")
             item[4] = array[0][1]
             item[5] = array[1][1]
             item[6] = array[2][1]
@@ -460,11 +502,12 @@ export async function checkAndUpdateDatabasePlayersITF(Name, ITFID) {
     return array
 }
 
+// Function to check and update the database when encountering USTA player
 export async function checkAndUpdateDatabasePlayersUSTA(Name, USTAID){
     let database = await loadDatabasePlayers()
 
-    // Find the index of the row that contains the UTRID
-    let rowIndex = database.findIndex(row => row[1] === ITFID);
+    // Find the index of the row that contains the USTAID
+    let rowIndex = database.findIndex(row => row[3] === USTAID);
 
     let array = [["UTR Singles Rating"], ["UTR Doubles Rating"], ["ITF Singles Rating"], ["ITF Doubles Rating"], ["USTA Singles Rating"], ["USTA Doubles Rating"]]
     console.log("Starting database checking and update")
@@ -478,9 +521,121 @@ export async function checkAndUpdateDatabasePlayersUSTA(Name, USTAID){
         array[4].push(existingRow[8])
         array[5].push(existingRow[9])
     } else {
-    
-    // Find USTA User data
+        // Find USTA User data
+        let USTADataOut = await GetPlayerInfoUSTAID(USTAID)
+
+        //Initiate temporary values
+        let item = [Name, "NA", "NA", USTAID, 0, 0, 0, 0, 0, 0, []]
+        array[0].push(0)
+        array[1].push(0)
+        array[2].push(0)
+        array[3].push(0)
+        array[4].push(0)
+        array[5].push(0)
+
+        //Check if USTA data exists
+        if (USTADataOut[0].length > 1 && USTADataOut[0][1] == Name) {
+            //If USTA data exists, update array values
+            if(USTADataOut[1].length > 1 && USTADataOut[2].length > 1){
+                array[4][1] = USTADataOut[1][1]
+                array[5][1] = USTADataOut[2][1]
+            }
+
+            // Get information from UTR
+            let UTRDataOut = await GetPlayerInfoUTRmatchingUSTA(Name, USTAID)
+            // Check if UTR Data exists, then update array
+            if(UTRDataOut[1].length > 1 && UTRDataOut[2].length > 1 && UTRDataOut[3].length > 1){
+                UTRIDOut = UTRDataOut[3][1]
+                array[0][1] = UTRDataOut[1][1]
+                array[1][1] = UTRDataOut[2][1]
+
+                //Check if ITF player exists with corresponding UTR ID
+                let ITFDataOut = await GetPlayerInfoITFmatchingUTR(Name, UTRIDOut)
+                let ITFID = 0
+                // Check if ITF Data exists, then update array
+                if(ITFDataOut[1].length > 1 && ITFDataOut[2].length > 1 && ITFDataOut[3].length > 1){
+                    ITFID = ITFDataOut[3][1]
+                    array[2][1] = ITFDataOut[1][1]
+                    array[3][1] = ITFDataOut[2][1]
+                }
+
+                //Check to see if database entry for player already exists with UTR and no USTA
+                let UTRrowIndex = database.findIndex(row => row[1] === UTRIDOut)
+
+                //If entry exists, update USTA info and remove no USTA data flag
+                if(UTRrowIndex !== -1){
+                    database[UTRrowIndex][3] = USTAID
+                    database[UTRrowIndex][8] = array[4][1]
+                    database[UTRrowIndex][9] = array[5][1]
+
+                    //Add USTA info as well as remove flag
+                    if(ITFID != 0){
+                        database[UTRrowIndex][2] = ITFID
+                        database[UTRrowIndex][6] = array[2][1]
+                        database[UTRrowIndex][7] = array[3][1]
+                        for(let tempIndex = 0; tempIndex < database[UTRrowIndex][10].length; tempIndex++){
+                            if(database[UTRrowIndex][10][tempIndex] == "No ITF Data"){
+                                database[UTRrowIndex][10].splice(tempIndex, 1)
+                            }
+                        }
+                    }
+
+                    if(array[0][1] !== 0 && array[1][1] !== 0){
+                        for(let tempIndex = 0; tempIndex < database[UTRrowIndex][8].length; tempIndex++){
+                            if(database[UTRrowIndex][8][tempIndex] == "No USTA Data"){
+                                database[UTRrowIndex][8].splice(tempIndex, 1)
+                            }
+                        }
+                    }
+                }
+
+                //Otherwise create new entry and push to database
+                else{
+                    item[4] = array[0][1]
+                    item[5] = array[1][1]
+                    item[6] = array[2][1]
+                    item[7] = array[3][1]
+                    item[8] = array[4][1]
+                    item[9] = array[5][1]
+                    item[1] = UTRIDOut
+                    if(ITFID != 0){
+                        item[2] = ITFID
+                    }
+                    else{
+                        item[10].push("No ITF Data")
+                    }
+                    database.push(item)
+                }
+            }
+            //Otherwise, no UTR player found
+            else{
+                item[10].push("No UTR Data")
+                item[10].push("No ITF Data")
+                item[4] = array[0][1]
+                item[5] = array[1][1]
+                item[6] = array[2][1]
+                item[7] = array[3][1]
+                database.push(item)
+            }
+            
+        }
+        //If no USTA data, update item and push to database with appropriate flag
+        else{
+            item[10].push("No UTR Data")
+            item[10].push("No ITF Data")
+            item[10].push("No USTA Data")
+            item[4] = array[0][1]
+            item[5] = array[1][1]
+            item[6] = array[2][1]
+            item[7] = array[3][1]
+            item[8] = array[4][1]
+            item[9] = array[5][1]
+            database.push(item)
+        }
     }
+    await saveDatabasePlayers(database)
+    console.log("Finished checking and updating database")
+    return array
 }
 
 // Find UTR for player by matching existing ITF
