@@ -20,7 +20,7 @@ function sleep(ms) {
 
 //Automate updateDatabaseEntriesPlayers(), update path to players database after creating blob storage
 
-//Not working, assume it returns a 2D array of strings
+//Not working, assume it returns an array of strings
 async function getPlayerPlayHistoryUSTA(ID){
 
     const agent = new HttpsProxyAgent(proxyUrl)
@@ -29,6 +29,7 @@ async function getPlayerPlayHistoryUSTA(ID){
 
     let tournaments = []
 
+    //Running into issue of getting valid bearer tokens for each request, everything else works fine
 
     return tournaments
 }
@@ -36,8 +37,8 @@ async function getPlayerPlayHistoryUSTA(ID){
 // let data = await getPlayerPlayHistoryUSTA('2010845482')
 // console.log(data)
 
-// Fetch player history USTA
-const agent = new HttpsProxyAgent(proxyUrl)
+// Attempt to fetch player history USTA
+// const agent = new HttpsProxyAgent(proxyUrl)
 // let data = await fetch("https://services.usta.com/v1/dataexchange/playhistory", {
 //     "headers": {
 //       "accept": "application/json, text/plain, */*",
@@ -59,31 +60,6 @@ const agent = new HttpsProxyAgent(proxyUrl)
 // });
 // data = await data.text()
 // console.log(data)
-
-
-//Used for saving and loading locally for testing
-// const saveData = async (jsonData) => {
-//     try {
-//         const dataPath = `${__dirname}/data.json`
-//         const dataString = JSON.stringify(jsonData, null, 2); // Convert JSON to string with indentation
-//         await fs.promises.writeFile(dataPath, dataString, { encoding: 'utf8' });
-//         console.log('Data saved successfully.');
-//     } catch (error) {
-//         console.error('Error saving data:', error);
-//     }
-// }
-
-// const loadData = async () => {
-//     try {
-//         const dataPath = `${__dirname}/data.json`
-//         const dataString = await fs.promises.readFile(dataPath, { encoding: 'utf8' });
-//         const jsonData = JSON.parse(dataString); // Convert string to JSON
-//         console.log('Data loaded successfully:');
-//         return jsonData;
-//     } catch (error) {
-//         console.error('Error loading data:', error);
-//     }
-// }
 
 async function updateDatabaseEntriesPlayers(){
     let database = await loadDatabasePlayers()
