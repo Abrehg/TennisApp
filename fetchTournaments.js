@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { checkAndUpdateDatabasePlayersUTR, checkAndUpdateDatabasePlayersITF, checkAndUpdateDatabasePlayersUSTA} from './fetchPlayerInfo.js';
 
-// Define the path to the file
+// Define the path to the database file
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const path = `${__dirname}/tournaments_database.json`;
@@ -14,28 +14,40 @@ const path = `${__dirname}/tournaments_database.json`;
 // Define Proxy URL
 const proxyUrl = 'http://brd-customer-hl_74a6dbf2-zone-tortue_tennis_prod_01:vfkrwksemz8m@brd.superproxy.io:22225';
 
-const saveData = async (jsonData) => {
-    try {
-        const dataPath = `${__dirname}/data.json`
-        const dataString = JSON.stringify(jsonData, null, 2); // Convert JSON to string with indentation
-        await fs.promises.writeFile(dataPath, dataString, { encoding: 'utf8' });
-        console.log('Data saved successfully.');
-    } catch (error) {
-        console.error('Error saving data:', error);
-    }
-};
+// Functions to automate: updateEntriesTourn(), addTournDatabaseEntries()
 
-const loadData = async () => {
-    try {
-        const dataPath = `${__dirname}/data.json`
-        const dataString = await fs.promises.readFile(dataPath, { encoding: 'utf8' });
-        const jsonData = JSON.parse(dataString); // Convert string to JSON
-        console.log('Data loaded successfully:');
-        return jsonData;
-    } catch (error) {
-        console.error('Error loading data:', error);
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    const shortYear = String(year).slice(-2);
+    
+    return {
+      "USTA": `${month}/${day}/${shortYear}`,
+      "UTR": `${month}/${day}/${year}`,
+      "ITF": `${year}-${month}-${day}`,
+    };
+}
+
+async function addTournDatabaseEntries(){
+
+    // Define a start date (date 1 month previous) (mm/dd/yy for USTA, mm/dd/yyyy for UTR, yyyy-mm-dd for ITF)
+    const previousMonthDate = new Date();
+    previousMonthDate.setMonth(currentDate.getMonth() - 1);
+    if (previousMonthDate.getMonth() === 11) { // Adjust for year wraparound
+        previousMonthDate.setFullYear(currentDate.getFullYear() - 1);
     }
-};
+    const startDate = formatDate(previousMonthDate);
+    
+    // Define an end date (current date) (mm/dd/yy for USTA, mm/dd/yyyy for UTR, yyyy-mm-dd for ITF)
+    const currentDate = new Date();
+    const endDate = formatDate(currentDate);
+
+    await GetTournamentListUSTA(startDate["USTA"], endDate["USTA"], 200, 0);
+    await GetTournamentListUTR(startDate["UTR"], endDate["UTR"], "200", 0);
+    await GetTournamentListITF(startDate["ITF"], endDate["ITF"]);
+}
 
 async function updateDatabaseEntriesTourn(){
     let database = await loadDatabaseTournaments()
@@ -672,295 +684,6 @@ async function GetTournamentAcceptListUTR(tournID){
 
 // let data = await loadData()
 
-// Find average UTR and ITF for each UTR tournament
-async function findTennisAverages(attendanceList, platform){
-    let array = [["Avg UTR Singles"], ["Min UTR Singles"], ["Max UTR Singles"], ["Avg UTR Doubles"], ["Min UTR Doubles"], ["Max UTR Doubles"], ["Avg ITF Singles"], ["Min ITF Singles"], ["Max ITF Singles"], ["Avg ITF Doubles"], ["Min ITF Doubles"], ["Max ITF Doubles"], ["Avg USTA Singles"], ["Min USTA Singles"], ["Max USTA Singles"], ["Avg USTA Doubles"], ["Min USTA Doubles"], ["Max USTA Doubles"]]
-    let totalUTRSingles = 0
-    let totalUTRDoubles = 0
-    let totalITFSingles = 0
-    let totalITFDoubles = 0
-    let totalUSTASingles = 0
-    let totalUSTADoubles = 0
-
-    let minUTRSingles = "NA"
-    let maxUTRSingles = "NA"
-    let minUTRDoubles = "NA"
-    let maxUTRDoubles = "NA"
-    let minITFSingles = "NA"
-    let maxITFSingles = "NA"
-    let minITFDoubles = "NA"
-    let maxITFDoubles = "NA"
-    let minUSTASingles = "NA"
-    let maxUSTASingles = "NA"
-    let minUSTADoubles = "NA"
-    let maxUSTADoubles = "NA"
-
-    if(platform == 0){
-        for(let i = 1; i < attendanceList[0].length; i++){
-            let TennisDataOut = await checkAndUpdateDatabasePlayersUTR(attendanceList[0][i], attendanceList[1][i])
-
-            if(TennisDataOut[0].length > 1 && TennisDataOut[1].length > 1 && TennisDataOut[2].length > 1 && TennisDataOut[3].length > 1){
-                totalUTRSingles = totalUTRSingles + TennisDataOut[0][1]
-                totalUTRDoubles = totalUTRDoubles + TennisDataOut[1][1]
-                totalITFSingles = totalITFSingles + TennisDataOut[2][1]
-                totalITFDoubles = totalITFDoubles + TennisDataOut[3][1]
-                totalUSTASingles = totalUSTASingles + TennisDataOut[4][1]
-                totalUSTADoubles = totalUSTADoubles + TennisDataOut[5][1]
-    
-                if(minUTRSingles == "NA" || TennisDataOut[0][1] < minUTRSingles){
-                    minUTRSingles = TennisDataOut[0][1]
-                }
-                if(maxUTRSingles == "NA" || TennisDataOut[0][1] > maxUTRSingles){
-                    maxUTRSingles = TennisDataOut[0][1]
-                }
-                if(minUTRDoubles == "NA" || TennisDataOut[1][1] < minUTRDoubles){
-                    minUTRDoubles = TennisDataOut[1][1]
-                }
-                if(maxUTRDoubles == "NA" || TennisDataOut[1][1] > maxUTRDoubles){
-                    maxUTRDoubles = TennisDataOut[1][1]
-                }
-                if(minITFSingles == "NA" || TennisDataOut[2][1] < minITFSingles){
-                    minITFSingles = TennisDataOut[2][1]
-                }
-                if(maxITFSingles == "NA" || TennisDataOut[2][1] > maxITFSingles){
-                    maxITFSingles = TennisDataOut[2][1]
-                }
-                if(minITFDoubles == "NA" || TennisDataOut[3][1] < minITFDoubles){
-                    minITFDoubles = TennisDataOut[3][1]
-                }
-                if(maxITFDoubles == "NA" || TennisDataOut[3][1] > maxITFDoubles){
-                    maxITFDoubles = TennisDataOut[3][1]
-                }
-                if(minUSTASingles == "NA" || TennisDataOut[4][1] < minUSTASingles){
-                    minUSTASingles = TennisDataOut[4][1]
-                }
-                if(maxUSTASingles == "NA" || TennisDataOut[4][1] > maxUSTASingles){
-                    maxUSTASingles = TennisDataOut[4][1]
-                }
-                if(minUSTADoubles == "NA" || TennisDataOut[5][1] < minUSTADoubles){
-                    minUSTADoubles = TennisDataOut[5][1]
-                }
-                if(maxUSTADoubles == "NA" || TennisDataOut[5][1] > maxUSTADoubles){
-                    maxUSTADoubles = TennisDataOut[5][1]
-                }
-            }
-            else{
-                let tempValUTRSingles = totalUTRSingles / i
-                let tempValUTRDoubles = totalUTRDoubles / i
-                let tempValITFSingles = totalITFSingles / i
-                let tempValITFDoubles = totalITFDoubles / i
-                let tempValUSTASingles = totalUSTASingles / i
-                let tempValUSTADoubles = totalUSTADoubles / i
-    
-                totalUTRSingles = totalUTRSingles + tempValUTRSingles
-                totalUTRDoubles = totalUTRDoubles + tempValUTRDoubles
-                totalITFSingles = totalITFSingles + tempValITFSingles
-                totalITFDoubles = totalITFDoubles + tempValITFDoubles
-                totalUSTASingles = totalUSTASingles + tempValUSTASingles
-                totalUSTADoubles = totalUSTADoubles + tempValUSTADoubles
-            }
-        }
-    }
-    else if (platform == 1){
-        for(let i = 1; i < attendanceList[0].length; i++){
-            let TennisDataOut = await checkAndUpdateDatabasePlayersITF(attendanceList[0][i], attendanceList[1][i])
-
-            if(TennisDataOut[0].length > 1 && TennisDataOut[1].length > 1 && TennisDataOut[2].length > 1 && TennisDataOut[3].length > 1){
-                totalUTRSingles = totalUTRSingles + TennisDataOut[0][1]
-                totalUTRDoubles = totalUTRDoubles + TennisDataOut[1][1]
-                totalITFSingles = totalITFSingles + TennisDataOut[2][1]
-                totalITFDoubles = totalITFDoubles + TennisDataOut[3][1]
-                totalUSTASingles = totalUSTASingles + TennisDataOut[4][1]
-                totalUSTADoubles = totalUSTADoubles + TennisDataOut[5][1]
-    
-                if(minUTRSingles == "NA" || TennisDataOut[0][1] < minUTRSingles){
-                    minUTRSingles = TennisDataOut[0][1]
-                }
-                if(maxUTRSingles == "NA" || TennisDataOut[0][1] > maxUTRSingles){
-                    maxUTRSingles = TennisDataOut[0][1]
-                }
-                if(minUTRDoubles == "NA" || TennisDataOut[1][1] < minUTRDoubles){
-                    minUTRDoubles = TennisDataOut[1][1]
-                }
-                if(maxUTRDoubles == "NA" || TennisDataOut[1][1] > maxUTRDoubles){
-                    maxUTRDoubles = TennisDataOut[1][1]
-                }
-                if(minITFSingles == "NA" || TennisDataOut[2][1] < minITFSingles){
-                    minITFSingles = TennisDataOut[2][1]
-                }
-                if(maxITFSingles == "NA" || TennisDataOut[2][1] > maxITFSingles){
-                    maxITFSingles = TennisDataOut[2][1]
-                }
-                if(minITFDoubles == "NA" || TennisDataOut[3][1] < minITFDoubles){
-                    minITFDoubles = TennisDataOut[3][1]
-                }
-                if(maxITFDoubles == "NA" || TennisDataOut[3][1] > maxITFDoubles){
-                    maxITFDoubles = TennisDataOut[3][1]
-                }
-                if(minUSTASingles == "NA" || TennisDataOut[4][1] < minUSTASingles){
-                    minUSTASingles = TennisDataOut[4][1]
-                }
-                if(maxUSTASingles == "NA" || TennisDataOut[4][1] > maxUSTASingles){
-                    maxUSTASingles = TennisDataOut[4][1]
-                }
-                if(minUSTADoubles == "NA" || TennisDataOut[5][1] < minUSTADoubles){
-                    minUSTADoubles = TennisDataOut[5][1]
-                }
-                if(maxUSTADoubles == "NA" || TennisDataOut[5][1] > maxUSTADoubles){
-                    maxUSTADoubles = TennisDataOut[5][1]
-                }
-            }
-            else{
-                let tempValUTRSingles = totalUTRSingles / i
-                let tempValUTRDoubles = totalUTRDoubles / i
-                let tempValITFSingles = totalITFSingles / i
-                let tempValITFDoubles = totalITFDoubles / i
-                let tempValUSTASingles = totalUSTASingles / i
-                let tempValUSTADoubles = totalUSTADoubles / i
-    
-                totalUTRSingles = totalUTRSingles + tempValUTRSingles
-                totalUTRDoubles = totalUTRDoubles + tempValUTRDoubles
-                totalITFSingles = totalITFSingles + tempValITFSingles
-                totalITFDoubles = totalITFDoubles + tempValITFDoubles
-                totalUSTASingles = totalUSTASingles + tempValUSTASingles
-                totalUSTADoubles = totalUSTADoubles + tempValUSTADoubles
-            }
-        }
-    }
-    else if(platform == 2){
-        for(let i = 1; i < attendanceList[0].length; i++){
-            let TennisDataOut = await checkAndUpdateDatabasePlayersUSTA(attendanceList[0][i], attendanceList[1][i])
-
-            if(TennisDataOut[0].length > 1 && TennisDataOut[1].length > 1 && TennisDataOut[2].length > 1 && TennisDataOut[3].length > 1){
-                totalUTRSingles = totalUTRSingles + TennisDataOut[0][1]
-                totalUTRDoubles = totalUTRDoubles + TennisDataOut[1][1]
-                totalITFSingles = totalITFSingles + TennisDataOut[2][1]
-                totalITFDoubles = totalITFDoubles + TennisDataOut[3][1]
-                totalUSTASingles = totalUSTASingles + TennisDataOut[4][1]
-                totalUSTADoubles = totalUSTADoubles + TennisDataOut[5][1]
-
-                if(minUTRSingles == "NA" || TennisDataOut[0][1] < minUTRSingles){
-                    minUTRSingles = TennisDataOut[0][1]
-                }
-                if(maxUTRSingles == "NA" || TennisDataOut[0][1] > maxUTRSingles){
-                    maxUTRSingles = TennisDataOut[0][1]
-                }
-                if(minUTRDoubles == "NA" || TennisDataOut[1][1] < minUTRDoubles){
-                    minUTRDoubles = TennisDataOut[1][1]
-                }
-                if(maxUTRDoubles == "NA" || TennisDataOut[1][1] > maxUTRDoubles){
-                    maxUTRDoubles = TennisDataOut[1][1]
-                }
-                if(minITFSingles == "NA" || TennisDataOut[2][1] < minITFSingles){
-                    minITFSingles = TennisDataOut[2][1]
-                }
-                if(maxITFSingles == "NA" || TennisDataOut[2][1] > maxITFSingles){
-                    maxITFSingles = TennisDataOut[2][1]
-                }
-                if(minITFDoubles == "NA" || TennisDataOut[3][1] < minITFDoubles){
-                    minITFDoubles = TennisDataOut[3][1]
-                }
-                if(maxITFDoubles == "NA" || TennisDataOut[3][1] > maxITFDoubles){
-                    maxITFDoubles = TennisDataOut[3][1]
-                }
-                if(minUSTASingles == "NA" || TennisDataOut[4][1] < minUSTASingles){
-                    minUSTASingles = TennisDataOut[4][1]
-                }
-                if(maxUSTASingles == "NA" || TennisDataOut[4][1] > maxUSTASingles){
-                    maxUSTASingles = TennisDataOut[4][1]
-                }
-                if(minUSTADoubles == "NA" || TennisDataOut[5][1] < minUSTADoubles){
-                    minUSTADoubles = TennisDataOut[5][1]
-                }
-                if(maxUSTADoubles == "NA" || TennisDataOut[5][1] > maxUSTADoubles){
-                    maxUSTADoubles = TennisDataOut[5][1]
-                }
-            }
-            else{
-                let tempValUTRSingles = totalUTRSingles / i
-                let tempValUTRDoubles = totalUTRDoubles / i
-                let tempValITFSingles = totalITFSingles / i
-                let tempValITFDoubles = totalITFDoubles / i
-                let tempValUSTASingles = totalUSTASingles / i
-                let tempValUSTADoubles = totalUSTADoubles / i
-
-                totalUTRSingles = totalUTRSingles + tempValUTRSingles
-                totalUTRDoubles = totalUTRDoubles + tempValUTRDoubles
-                totalITFSingles = totalITFSingles + tempValITFSingles
-                totalITFDoubles = totalITFDoubles + tempValITFDoubles
-                totalUSTASingles = totalUSTASingles + tempValUSTASingles
-                totalUSTADoubles = totalUSTADoubles + tempValUSTADoubles
-            }
-        }
-    }
-    else{
-        console.log("Incorrect averages format")
-        return
-    }
-
-    console.log("total UTR Singles: " + totalUTRSingles)
-    console.log("total UTR Doubles: " + totalUTRDoubles)
-    console.log("total ITF Singles: " + totalITFSingles)
-    console.log("total ITF Doubles: " + totalITFDoubles)
-    console.log("total USTA Singles: " + totalUSTASingles)
-    console.log("total USTA Doubles: " + totalUSTADoubles)
-
-    let avgUTRSingles = totalUTRSingles / attendanceList[0].length
-    let avgUTRDoubles = totalUTRDoubles / attendanceList[0].length
-    let avgITFSingles = totalITFSingles / attendanceList[0].length
-    let avgITFDoubles = totalITFDoubles / attendanceList[0].length
-    let avgUSTASingles = totalUSTASingles / attendanceList[0].length
-    let avgUSTADoubles = totalUSTADoubles / attendanceList[0].length
-
-    array[0].push(avgUTRSingles)
-    array[1].push(minUTRSingles)
-    array[2].push(maxUTRSingles)
-    array[3].push(avgUTRDoubles)
-    array[4].push(minUTRDoubles)
-    array[5].push(maxUTRDoubles)
-    array[6].push(avgITFSingles)
-    array[7].push(minITFSingles)
-    array[8].push(maxITFSingles)
-    array[9].push(avgITFDoubles)
-    array[10].push(minITFDoubles)
-    array[11].push(maxITFDoubles)
-    array[12].push(avgUSTASingles)
-    array[13].push(minUSTASingles)
-    array[14].push(maxUSTASingles)
-    array[15].push(avgUSTADoubles)
-    array[16].push(minUSTADoubles)
-    array[17].push(maxUSTADoubles)
-
-    return array
-}
-
-// Function to load the database from disk
-async function loadDatabaseTournaments() {
-    try {
-        if (fs.existsSync(path)) {
-            // Read the file and parse it as JSON
-            const data = await fs.promises.readFile(path, 'utf8');
-            return JSON.parse(data);
-        }
-    } catch (error) {
-        console.error('Error loading database:', error);
-    }
-    // Return an empty array if the file does not exist
-    return [["Platform","Tournament Name","Tournament Key","Tournament Surface","Tournament Promo Name","Start Date","End Date","Tennis Category","Host nation","Venue","Indoor or Outdoor","Acceptance List","Average UTR Singles","Min UTR Singles","Max UTR Doubles","Average UTR Doubles","Min UTR Doubles","Max UTR Doubles","Average ITF Singles","Min ITF Singles","Max ITF Doubles","Average ITF Doubles","Min ITF Doubles","Max ITF Doubles","Average USTA Singles","Min USTA Singles","Max USTA Singles","Average USTA Doubles","Min USTA Doubles","Max USTA Doubles","Flags"]];
-    // return [["name","ID"]];
-}
-
-// Function to save the database to disk
-async function saveDatabaseTournaments(database) {
-    try {
-        // Convert the array to a JSON string and write it to the file
-        const data = JSON.stringify(database, null, 2);
-        await fs.promises.writeFile(path, data, 'utf8');
-    } catch (error) {
-        console.error('Error saving database:', error);
-    }
-}
-
 // Function to check and update the database
 async function checkAndUpdateDatabaseTournaments(platform, tournamentName, tournamentKey, tournamentSurface, tournamentPromoName, startDate, endDate, tennisCategory, hostNation, venue, indoorOrOutdoor, acceptanceList, averageUTRSingles, minUTRSingles, maxUTRSingles, averageUTRDoubles, minUTRDoubles, maxUTRDoubles, averageITFSingles, minITFSingles, maxITFSingles, averageITFDoubles, minITFDoubles, maxITFDoubles, averageUSTASingles, minUSTASingles, maxUSTASingles, averageUSTADoubles, minUSTADoubles, maxUSTADoubles, flags) {
     let database = await loadDatabaseTournaments()
@@ -975,19 +698,6 @@ async function checkAndUpdateDatabaseTournaments(platform, tournamentName, tourn
 
     await saveDatabaseTournaments(database)
 }
-
-// let database = await loadDatabaseTournaments()
-
-// // Example usage
-// checkAndUpdateDatabaseTournaments("John Doe", "123");
-// checkAndUpdateDatabaseTournaments("Jane Smith", "456");
-// checkAndUpdateDatabaseTournaments("Adam Smith", "789");
-
-// console.log(database);
-
-// await saveDatabaseTournaments(database)
-
-// console.log("Database saved")
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -1480,3 +1190,292 @@ async function GetAcceptanceListITF(tournamentKey, tournCircuitCode){
 // GetAcceptanceList(tournamentKey, circCode).then(out => {
 //     console.log(out);
 // });
+
+// Function to load the database from disk
+async function loadDatabaseTournaments() {
+    try {
+        if (fs.existsSync(path)) {
+            // Read the file and parse it as JSON
+            const data = await fs.promises.readFile(path, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (error) {
+        console.error('Error loading database:', error);
+    }
+    // Return an empty array if the file does not exist
+    return [["Platform","Tournament Name","Tournament Key","Tournament Surface","Tournament Promo Name","Start Date","End Date","Tennis Category","Host nation","Venue","Indoor or Outdoor","Acceptance List","Average UTR Singles","Min UTR Singles","Max UTR Doubles","Average UTR Doubles","Min UTR Doubles","Max UTR Doubles","Average ITF Singles","Min ITF Singles","Max ITF Doubles","Average ITF Doubles","Min ITF Doubles","Max ITF Doubles","Average USTA Singles","Min USTA Singles","Max USTA Singles","Average USTA Doubles","Min USTA Doubles","Max USTA Doubles","Flags"]];
+    // return [["name","ID"]];
+}
+
+// Function to save the database to disk
+async function saveDatabaseTournaments(database) {
+    try {
+        // Convert the array to a JSON string and write it to the file
+        const data = JSON.stringify(database, null, 2);
+        await fs.promises.writeFile(path, data, 'utf8');
+    } catch (error) {
+        console.error('Error saving database:', error);
+    }
+}
+
+// Find average UTR, ITF, and USTA for each tournament (0 for UTR, 1 for ITF, 2 for USTA)
+async function findTennisAverages(attendanceList, platform){
+    let array = [["Avg UTR Singles"], ["Min UTR Singles"], ["Max UTR Singles"], ["Avg UTR Doubles"], ["Min UTR Doubles"], ["Max UTR Doubles"], ["Avg ITF Singles"], ["Min ITF Singles"], ["Max ITF Singles"], ["Avg ITF Doubles"], ["Min ITF Doubles"], ["Max ITF Doubles"], ["Avg USTA Singles"], ["Min USTA Singles"], ["Max USTA Singles"], ["Avg USTA Doubles"], ["Min USTA Doubles"], ["Max USTA Doubles"]]
+    let totalUTRSingles = 0
+    let totalUTRDoubles = 0
+    let totalITFSingles = 0
+    let totalITFDoubles = 0
+    let totalUSTASingles = 0
+    let totalUSTADoubles = 0
+
+    let minUTRSingles = "NA"
+    let maxUTRSingles = "NA"
+    let minUTRDoubles = "NA"
+    let maxUTRDoubles = "NA"
+    let minITFSingles = "NA"
+    let maxITFSingles = "NA"
+    let minITFDoubles = "NA"
+    let maxITFDoubles = "NA"
+    let minUSTASingles = "NA"
+    let maxUSTASingles = "NA"
+    let minUSTADoubles = "NA"
+    let maxUSTADoubles = "NA"
+
+    if(platform == 0){
+        for(let i = 1; i < attendanceList[0].length; i++){
+            let TennisDataOut = await checkAndUpdateDatabasePlayersUTR(attendanceList[0][i], attendanceList[1][i])
+
+            if(TennisDataOut[0].length > 1 && TennisDataOut[1].length > 1 && TennisDataOut[2].length > 1 && TennisDataOut[3].length > 1){
+                totalUTRSingles = totalUTRSingles + TennisDataOut[0][1]
+                totalUTRDoubles = totalUTRDoubles + TennisDataOut[1][1]
+                totalITFSingles = totalITFSingles + TennisDataOut[2][1]
+                totalITFDoubles = totalITFDoubles + TennisDataOut[3][1]
+                totalUSTASingles = totalUSTASingles + TennisDataOut[4][1]
+                totalUSTADoubles = totalUSTADoubles + TennisDataOut[5][1]
+    
+                if(minUTRSingles == "NA" || TennisDataOut[0][1] < minUTRSingles){
+                    minUTRSingles = TennisDataOut[0][1]
+                }
+                if(maxUTRSingles == "NA" || TennisDataOut[0][1] > maxUTRSingles){
+                    maxUTRSingles = TennisDataOut[0][1]
+                }
+                if(minUTRDoubles == "NA" || TennisDataOut[1][1] < minUTRDoubles){
+                    minUTRDoubles = TennisDataOut[1][1]
+                }
+                if(maxUTRDoubles == "NA" || TennisDataOut[1][1] > maxUTRDoubles){
+                    maxUTRDoubles = TennisDataOut[1][1]
+                }
+                if(minITFSingles == "NA" || TennisDataOut[2][1] < minITFSingles){
+                    minITFSingles = TennisDataOut[2][1]
+                }
+                if(maxITFSingles == "NA" || TennisDataOut[2][1] > maxITFSingles){
+                    maxITFSingles = TennisDataOut[2][1]
+                }
+                if(minITFDoubles == "NA" || TennisDataOut[3][1] < minITFDoubles){
+                    minITFDoubles = TennisDataOut[3][1]
+                }
+                if(maxITFDoubles == "NA" || TennisDataOut[3][1] > maxITFDoubles){
+                    maxITFDoubles = TennisDataOut[3][1]
+                }
+                if(minUSTASingles == "NA" || TennisDataOut[4][1] < minUSTASingles){
+                    minUSTASingles = TennisDataOut[4][1]
+                }
+                if(maxUSTASingles == "NA" || TennisDataOut[4][1] > maxUSTASingles){
+                    maxUSTASingles = TennisDataOut[4][1]
+                }
+                if(minUSTADoubles == "NA" || TennisDataOut[5][1] < minUSTADoubles){
+                    minUSTADoubles = TennisDataOut[5][1]
+                }
+                if(maxUSTADoubles == "NA" || TennisDataOut[5][1] > maxUSTADoubles){
+                    maxUSTADoubles = TennisDataOut[5][1]
+                }
+            }
+            else{
+                let tempValUTRSingles = totalUTRSingles / i
+                let tempValUTRDoubles = totalUTRDoubles / i
+                let tempValITFSingles = totalITFSingles / i
+                let tempValITFDoubles = totalITFDoubles / i
+                let tempValUSTASingles = totalUSTASingles / i
+                let tempValUSTADoubles = totalUSTADoubles / i
+    
+                totalUTRSingles = totalUTRSingles + tempValUTRSingles
+                totalUTRDoubles = totalUTRDoubles + tempValUTRDoubles
+                totalITFSingles = totalITFSingles + tempValITFSingles
+                totalITFDoubles = totalITFDoubles + tempValITFDoubles
+                totalUSTASingles = totalUSTASingles + tempValUSTASingles
+                totalUSTADoubles = totalUSTADoubles + tempValUSTADoubles
+            }
+        }
+    }
+    else if (platform == 1){
+        for(let i = 1; i < attendanceList[0].length; i++){
+            let TennisDataOut = await checkAndUpdateDatabasePlayersITF(attendanceList[0][i], attendanceList[1][i])
+
+            if(TennisDataOut[0].length > 1 && TennisDataOut[1].length > 1 && TennisDataOut[2].length > 1 && TennisDataOut[3].length > 1){
+                totalUTRSingles = totalUTRSingles + TennisDataOut[0][1]
+                totalUTRDoubles = totalUTRDoubles + TennisDataOut[1][1]
+                totalITFSingles = totalITFSingles + TennisDataOut[2][1]
+                totalITFDoubles = totalITFDoubles + TennisDataOut[3][1]
+                totalUSTASingles = totalUSTASingles + TennisDataOut[4][1]
+                totalUSTADoubles = totalUSTADoubles + TennisDataOut[5][1]
+    
+                if(minUTRSingles == "NA" || TennisDataOut[0][1] < minUTRSingles){
+                    minUTRSingles = TennisDataOut[0][1]
+                }
+                if(maxUTRSingles == "NA" || TennisDataOut[0][1] > maxUTRSingles){
+                    maxUTRSingles = TennisDataOut[0][1]
+                }
+                if(minUTRDoubles == "NA" || TennisDataOut[1][1] < minUTRDoubles){
+                    minUTRDoubles = TennisDataOut[1][1]
+                }
+                if(maxUTRDoubles == "NA" || TennisDataOut[1][1] > maxUTRDoubles){
+                    maxUTRDoubles = TennisDataOut[1][1]
+                }
+                if(minITFSingles == "NA" || TennisDataOut[2][1] < minITFSingles){
+                    minITFSingles = TennisDataOut[2][1]
+                }
+                if(maxITFSingles == "NA" || TennisDataOut[2][1] > maxITFSingles){
+                    maxITFSingles = TennisDataOut[2][1]
+                }
+                if(minITFDoubles == "NA" || TennisDataOut[3][1] < minITFDoubles){
+                    minITFDoubles = TennisDataOut[3][1]
+                }
+                if(maxITFDoubles == "NA" || TennisDataOut[3][1] > maxITFDoubles){
+                    maxITFDoubles = TennisDataOut[3][1]
+                }
+                if(minUSTASingles == "NA" || TennisDataOut[4][1] < minUSTASingles){
+                    minUSTASingles = TennisDataOut[4][1]
+                }
+                if(maxUSTASingles == "NA" || TennisDataOut[4][1] > maxUSTASingles){
+                    maxUSTASingles = TennisDataOut[4][1]
+                }
+                if(minUSTADoubles == "NA" || TennisDataOut[5][1] < minUSTADoubles){
+                    minUSTADoubles = TennisDataOut[5][1]
+                }
+                if(maxUSTADoubles == "NA" || TennisDataOut[5][1] > maxUSTADoubles){
+                    maxUSTADoubles = TennisDataOut[5][1]
+                }
+            }
+            else{
+                let tempValUTRSingles = totalUTRSingles / i
+                let tempValUTRDoubles = totalUTRDoubles / i
+                let tempValITFSingles = totalITFSingles / i
+                let tempValITFDoubles = totalITFDoubles / i
+                let tempValUSTASingles = totalUSTASingles / i
+                let tempValUSTADoubles = totalUSTADoubles / i
+    
+                totalUTRSingles = totalUTRSingles + tempValUTRSingles
+                totalUTRDoubles = totalUTRDoubles + tempValUTRDoubles
+                totalITFSingles = totalITFSingles + tempValITFSingles
+                totalITFDoubles = totalITFDoubles + tempValITFDoubles
+                totalUSTASingles = totalUSTASingles + tempValUSTASingles
+                totalUSTADoubles = totalUSTADoubles + tempValUSTADoubles
+            }
+        }
+    }
+    else if(platform == 2){
+        for(let i = 1; i < attendanceList[0].length; i++){
+            let TennisDataOut = await checkAndUpdateDatabasePlayersUSTA(attendanceList[0][i], attendanceList[1][i])
+
+            if(TennisDataOut[0].length > 1 && TennisDataOut[1].length > 1 && TennisDataOut[2].length > 1 && TennisDataOut[3].length > 1){
+                totalUTRSingles = totalUTRSingles + TennisDataOut[0][1]
+                totalUTRDoubles = totalUTRDoubles + TennisDataOut[1][1]
+                totalITFSingles = totalITFSingles + TennisDataOut[2][1]
+                totalITFDoubles = totalITFDoubles + TennisDataOut[3][1]
+                totalUSTASingles = totalUSTASingles + TennisDataOut[4][1]
+                totalUSTADoubles = totalUSTADoubles + TennisDataOut[5][1]
+
+                if(minUTRSingles == "NA" || TennisDataOut[0][1] < minUTRSingles){
+                    minUTRSingles = TennisDataOut[0][1]
+                }
+                if(maxUTRSingles == "NA" || TennisDataOut[0][1] > maxUTRSingles){
+                    maxUTRSingles = TennisDataOut[0][1]
+                }
+                if(minUTRDoubles == "NA" || TennisDataOut[1][1] < minUTRDoubles){
+                    minUTRDoubles = TennisDataOut[1][1]
+                }
+                if(maxUTRDoubles == "NA" || TennisDataOut[1][1] > maxUTRDoubles){
+                    maxUTRDoubles = TennisDataOut[1][1]
+                }
+                if(minITFSingles == "NA" || TennisDataOut[2][1] < minITFSingles){
+                    minITFSingles = TennisDataOut[2][1]
+                }
+                if(maxITFSingles == "NA" || TennisDataOut[2][1] > maxITFSingles){
+                    maxITFSingles = TennisDataOut[2][1]
+                }
+                if(minITFDoubles == "NA" || TennisDataOut[3][1] < minITFDoubles){
+                    minITFDoubles = TennisDataOut[3][1]
+                }
+                if(maxITFDoubles == "NA" || TennisDataOut[3][1] > maxITFDoubles){
+                    maxITFDoubles = TennisDataOut[3][1]
+                }
+                if(minUSTASingles == "NA" || TennisDataOut[4][1] < minUSTASingles){
+                    minUSTASingles = TennisDataOut[4][1]
+                }
+                if(maxUSTASingles == "NA" || TennisDataOut[4][1] > maxUSTASingles){
+                    maxUSTASingles = TennisDataOut[4][1]
+                }
+                if(minUSTADoubles == "NA" || TennisDataOut[5][1] < minUSTADoubles){
+                    minUSTADoubles = TennisDataOut[5][1]
+                }
+                if(maxUSTADoubles == "NA" || TennisDataOut[5][1] > maxUSTADoubles){
+                    maxUSTADoubles = TennisDataOut[5][1]
+                }
+            }
+            else{
+                let tempValUTRSingles = totalUTRSingles / i
+                let tempValUTRDoubles = totalUTRDoubles / i
+                let tempValITFSingles = totalITFSingles / i
+                let tempValITFDoubles = totalITFDoubles / i
+                let tempValUSTASingles = totalUSTASingles / i
+                let tempValUSTADoubles = totalUSTADoubles / i
+
+                totalUTRSingles = totalUTRSingles + tempValUTRSingles
+                totalUTRDoubles = totalUTRDoubles + tempValUTRDoubles
+                totalITFSingles = totalITFSingles + tempValITFSingles
+                totalITFDoubles = totalITFDoubles + tempValITFDoubles
+                totalUSTASingles = totalUSTASingles + tempValUSTASingles
+                totalUSTADoubles = totalUSTADoubles + tempValUSTADoubles
+            }
+        }
+    }
+    else{
+        console.log("Incorrect averages format")
+        return
+    }
+
+    console.log("total UTR Singles: " + totalUTRSingles)
+    console.log("total UTR Doubles: " + totalUTRDoubles)
+    console.log("total ITF Singles: " + totalITFSingles)
+    console.log("total ITF Doubles: " + totalITFDoubles)
+    console.log("total USTA Singles: " + totalUSTASingles)
+    console.log("total USTA Doubles: " + totalUSTADoubles)
+
+    let avgUTRSingles = totalUTRSingles / attendanceList[0].length
+    let avgUTRDoubles = totalUTRDoubles / attendanceList[0].length
+    let avgITFSingles = totalITFSingles / attendanceList[0].length
+    let avgITFDoubles = totalITFDoubles / attendanceList[0].length
+    let avgUSTASingles = totalUSTASingles / attendanceList[0].length
+    let avgUSTADoubles = totalUSTADoubles / attendanceList[0].length
+
+    array[0].push(avgUTRSingles)
+    array[1].push(minUTRSingles)
+    array[2].push(maxUTRSingles)
+    array[3].push(avgUTRDoubles)
+    array[4].push(minUTRDoubles)
+    array[5].push(maxUTRDoubles)
+    array[6].push(avgITFSingles)
+    array[7].push(minITFSingles)
+    array[8].push(maxITFSingles)
+    array[9].push(avgITFDoubles)
+    array[10].push(minITFDoubles)
+    array[11].push(maxITFDoubles)
+    array[12].push(avgUSTASingles)
+    array[13].push(minUSTASingles)
+    array[14].push(maxUSTASingles)
+    array[15].push(avgUSTADoubles)
+    array[16].push(minUSTADoubles)
+    array[17].push(maxUSTADoubles)
+
+    return array
+}
