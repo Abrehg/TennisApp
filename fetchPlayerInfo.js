@@ -4,10 +4,6 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
 import { HttpsProxyAgent } from 'https-proxy-agent'
-import pkg from 'jssoup';
-import puppeteer from 'puppeteer'
-import https from 'https'
-const JSSoup = pkg.default
 
 // Define Proxy URL
 const proxyUrl = 'http://brd-customer-hl_74a6dbf2-zone-tortue_tennis_testing_01:g4wsac8d9pux@brd.superproxy.io:22225';
@@ -20,6 +16,9 @@ const path = `${__dirname}/players_database.json`;
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+
+//Automate updateDatabaseEntriesPlayers(), update path to players database after creating blob storage
 
 //Not working, assume it returns a 2D array of strings
 async function getPlayerPlayHistoryUSTA(ID){
@@ -36,74 +35,6 @@ async function getPlayerPlayHistoryUSTA(ID){
 
 // let data = await getPlayerPlayHistoryUSTA('2010845482')
 // console.log(data)
-
-async function updateDatabaseEntriesPlayers(){
-    let database = await loadDatabasePlayers()
-
-    for(let i = 0; i < database.length; i++){
-        ["Full Name","UTR ID","ITF ID","USTA ID","UTR Singles Rating","UTR Doubles Rating","ITF Singles Rating","ITF Doubles Rating","USTA Singles Rating","USTA Doubles Rating","Flags"]
-        
-        if(database[i][10].includes("No UTR Data") != true){
-            if(database[i][1] != "NA"){
-                let UTRData = await GetPlayerUTRbyID(database[i][1])
-                if(UTRData[1].length > 1 && UTRData[2].length > 1){
-                    database[i][4] = UTRData[1][1]
-                    database[i][5] = UTRData[2][1]
-                }
-                else{
-                    database[i][10].push("No UTR Data")
-                }
-            }
-            else{
-                let UTRData = await GetPlayerInfoUTR(database[i][0])
-                if(UTRData[1].length > 1 && UTRData[2].length > 1 && UTRData[3].length > 1){
-                    database[i][4] = UTRData[1][1]
-                    database[i][5] = UTRData[2][1]
-                    database[i][1] = UTRData[3][1]
-                }
-                else{
-                    database[i][10].push("No UTR Data")
-                }
-            }
-        }
-
-        if(database[i][10].includes("No ITF Data") != true){
-            GetPlayerInfoITFID(circuitCode,ID)
-            [["Full Name"],["Singles Rating"],["Doubles Rating"]]
-            if(database[i][1] != "NA"){
-                let ITFData = "NA"
-                let circuitCodes = ["JT", "MT", "WT", "VT", "WCT", "BT"]
-                for(circCode in circuitCodes){
-                    ITFData = await GetPlayerInfoITFID(circCode, database[i][2])
-                    if(ITFData[1].length > 1 && ITFData[2].length > 1){
-                        database[i][4] = ITFData[1][1]
-                        database[i][5] = ITFData[2][1]
-                    }
-                }
-                if(ITFData == "NA"){
-                    database[i][10].push("No ITF Data")
-                }
-            }
-            else{
-                let ITFData = await GetPlayerInfoITF(database[i][0])
-                if(ITFData[1].length > 1 && ITFData[2].length > 1 && ITFData[3].length > 1){
-                    database[i][4] = ITFData[1][1]
-                    database[i][5] = ITFData[2][1]
-                    database[i][1] = ITFData[3][1]
-                }
-                else{
-                    database[i][10].push("No ITF Data")
-                }
-            }
-        }
-
-        if(database[i][10].includes("No USTA Data") != true){
-            //Find out how to update the USTA data later
-        }
-    }
-
-    await saveDatabasePlayers(database)
-}
 
 // Fetch player history USTA
 const agent = new HttpsProxyAgent(proxyUrl)
@@ -153,6 +84,683 @@ const agent = new HttpsProxyAgent(proxyUrl)
 //         console.error('Error loading data:', error);
 //     }
 // }
+
+async function updateDatabaseEntriesPlayers(){
+    let database = await loadDatabasePlayers()
+
+    for(let i = 0; i < database.length; i++){
+        //["Full Name","UTR ID","ITF ID","USTA ID","UTR Singles Rating","UTR Doubles Rating","ITF Singles Rating","ITF Doubles Rating","USTA Singles Rating","USTA Doubles Rating","Flags"]
+        
+        if(database[i][10].includes("No UTR Data") != true){
+            //Check if UTR ID is added
+            if(database[i][1] != "NA"){
+                // If added, update player values
+                let UTRData = await GetPlayerUTRbyID(database[i][1])
+                if(UTRData[1].length > 1 && UTRData[2].length > 1){
+                    database[i][4] = UTRData[1][1]
+                    database[i][5] = UTRData[2][1]
+                }
+                // If no data is found with ID, remove ID and add flag
+                else{
+                    database[i][10].push("No UTR Data")
+                    database[i][1] = "NA"
+                    database[i][4] = 0
+                    database[i][5] = 0
+                }
+            }
+            // Otherwise update flags
+            else{
+                database[i][10].push("No UTR Data")
+            }
+        }
+
+        if(database[i][10].includes("No ITF Data") != true){
+            //Check if ITF ID is added
+            if(database[i][2] != "NA"){
+                // If added, update player values
+                let ITFData = "NA"
+                let circuitCodes = ["JT", "MT", "WT", "VT", "WCT", "BT"]
+                for(circCode in circuitCodes){
+                    ITFData = await GetPlayerInfoITFID(circCode, database[i][2])
+                    if(ITFData[1].length > 1){
+                        database[i][6] = ITFData[1][1]
+                    }
+                    if(ITFData[2].length > 1){
+                        database[i][7] = ITFData[2][1]
+                    }
+                }
+                // If no data is found with ID, remove ID and add flag
+                if(ITFData == "NA"){
+                    database[i][10].push("No ITF Data")
+                    database[i][2] = "NA"
+                    database[i][6] = 0
+                    database[i][7] = 0
+                }
+            }
+            // Otherwise update flags
+            else{
+                database[i][10].push("No ITF Data")
+            }
+        }
+
+        if(database[i][10].includes("No USTA Data") != true){
+            //Check if USTA ID is added
+            if(database[i][3] != "NA"){
+                // If added, update player values
+                let USTAData = GetPlayerInfoUSTAID(database[i][3]);
+
+                if(USTAData[0].length > 1 && USTAData[3].length > 1 && USTAData[3][1] == database[i][3]){
+                    if(USTAData[1].length > 1){
+                        database[i][8] = USTAData[1][1]
+                    }
+                    if(USTAData[2].length > 1){
+                        database[i][9] = USTAData[2][1]
+                    }
+                }
+
+                // If no data is found with ID, remove ID and add flag
+                else{
+                    database[i][10].push("No USTA Data")
+                    database[i][3] = "NA"
+                    database[i][8] = 0
+                    database[i][9] = 0
+                }
+            }
+            // Otherwise update flags
+            else{
+                database[i][10].push("No USTA Data")
+            }
+        }
+    }
+
+    await saveDatabasePlayers(database)
+}
+
+async function loadDatabasePlayers() {
+    try {
+        if (fs.existsSync(path)) {
+            // Read the file and parse it as JSON
+            const data = await fs.promises.readFile(path, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (error) {
+        console.error('Error loading database:', error);
+    }
+    // Return an empty array if the file does not exist
+    return ["Full Name","UTR ID","ITF ID","USTA ID","UTR Singles Rating","UTR Doubles Rating","ITF Singles Rating","ITF Doubles Rating","USTA Singles Rating","USTA Doubles Rating","Flags"];
+    // return [["name","ID"]];
+}
+
+// Function to save the database to disk
+async function saveDatabasePlayers(database) {
+    try {
+        // Convert the array to a JSON string and write it to the file
+        const databaseData = JSON.stringify(database, null, 2);
+        await fs.promises.writeFile(path, databaseData, 'utf8');
+    } catch (error) {
+        console.error('Error saving database:', error);
+    }
+}
+
+// Function to check and update the database when encountering UTR player
+export async function checkAndUpdateDatabasePlayersUTR(Name, UTRID) {
+    let database = await loadDatabasePlayers()
+
+    // Find the index of the row that contains the UTRID
+    let rowIndex = database.findIndex(row => row[1] === UTRID);
+
+    let array = [["UTR Singles Rating"], ["UTR Doubles Rating"], ["ITF Singles Rating"], ["ITF Doubles Rating"], ["USTA Singles Rating"], ["USTA Doubles Rating"]]
+
+    console.log("Starting database checking and update")
+    console.log(rowIndex)
+    if (rowIndex !== -1) {
+        // Access data from existing row
+        let existingRow = database[rowIndex];
+        array[0].push(existingRow[4])
+        array[1].push(existingRow[5])
+        array[2].push(existingRow[6])
+        array[3].push(existingRow[7])
+        array[4].push(existingRow[8])
+        array[5].push(existingRow[9])
+    } else {
+        // If the ID does not exist, append a new row with the name and ID
+        let UTRDataOut = await GetPlayerUTRbyID(UTRID)
+
+        //Temporary values
+        let item = [Name, UTRID, "NA", "NA", 0, 0, 0, 0, 0, 0, []]
+        array[0].push(0)
+        array[1].push(0)
+        array[2].push(0)
+        array[3].push(0)
+        array[4].push(0)
+        array[5].push(0)
+
+        if (UTRDataOut[0].length > 1 && UTRDataOut[0][1] == Name) {
+            // Get information from UTR
+            // Check if UTR data exists, then update array
+            if(UTRDataOut[1].length > 1 && UTRDataOut[2].length > 1){
+                array[0][1] = UTRDataOut[1][1]
+                array[1][1] = UTRDataOut[2][1]
+            }
+
+            // Get information from ITF
+            let ITFDataOut = await GetPlayerInfoITFmatchingUTR(Name, UTRID)
+            // Check if ITF Data exists, then update array
+            if(ITFDataOut[1].length > 1 && ITFDataOut[2].length > 1 && ITFDataOut[3].length > 1){
+                ITFIDOut = ITFDataOut[3][1]
+                array[2][1] = ITFDataOut[1][1]
+                array[3][1] = ITFDataOut[2][1]
+
+                //Find USTA data for matching UTR player
+                let USTADataOut = GetPlayerInfoUSTAmatchingUTR(Name, UTRID)
+                let USTAID = 0
+                if(USTADataOut[0].length > 1 && USTADataOut[3].length > 1){
+                    if(USTADataOut[1].length > 1){
+                        array[4][1] = USTADataOut[1][1]
+                    }
+                    if(USTADataOut[2].length > 1){
+                        array[5][1] = USTADataOut[2][1]
+                    }
+                    USTAID = USTADataOut[3][1]
+                }
+
+                //Check to see if database entry for player already exists with ITF and no UTR
+                let ITFrowIndex = database.findIndex(row => row[2] === ITFIDOut)
+
+                //If entry exists, update UTR info and remove no UTR data flag
+                if(ITFrowIndex !== -1){
+                    database[ITFrowIndex][1] = UTRID
+                    database[ITFrowIndex][4] = array[0][1]
+                    database[ITFrowIndex][5] = array[1][1]
+                    //Add USTA info as well as remove flag
+                    if(USTAID != 0){
+                        database[ITFrowIndex][3] = USTAID
+                        database[ITFrowIndex][8] = array[4][1]
+                        database[ITFrowIndex][9] = array[5][1]
+                        for(let tempIndex = 0; tempIndex < database[ITFrowIndex][10].length; tempIndex++){
+                            if(database[ITFrowIndex][10][tempIndex] == "No USTA Data"){
+                                database[ITFrowIndex][10].splice(tempIndex, 1)
+                            }
+                        }
+                    }
+
+                    //Remove no UTR data flag
+                    if(array[0][1] !== 0 && array[1][1] !== 0){
+                        for(let tempIndex = 0; tempIndex < database[ITFrowIndex][10].length; tempIndex++){
+                            if(database[ITFrowIndex][10][tempIndex] == "No UTR Data"){
+                                database[ITFrowIndex][10].splice(tempIndex, 1)
+                            }
+                        }
+                    }
+                }
+                //Otherwise create new entry and push to database
+                else{
+                    item[4] = array[0][1]
+                    item[5] = array[1][1]
+                    item[6] = array[2][1]
+                    item[7] = array[3][1]
+                    item[2] = ITFIDOut
+                    if(USTAID != 0){
+                        item[3] = USTAID
+                        item[8] = array[4][1]
+                        item[9] = array[5][1]
+                    }
+                    else{
+                        item[10].push("No USTA Data")
+                    }
+                }
+            }
+            //If no ITF data, update item and add flag
+            else{
+                item[10].push("No ITF Data")
+                item[6] = array[2][1]
+                item[7] = array[3][1]
+            }
+
+            //Get data from USTA
+            let USTADataOut = GetPlayerInfoUSTAmatchingUTR(Name, UTRID)
+            if(USTADataOut[0].length > 1 && USTADataOut[3].length > 1){
+                if(USTADataOut[1].length > 1){
+                    array[4][1] = USTADataOut[1][1]
+                }
+                if(USTADataOut[2].length > 1){
+                    array[5][1] = USTADataOut[2][1]
+                }
+                USTAIDOut = USTADataOut[3][1]
+
+                //If there is entry in database with USTA and no UTR, find index
+                let USTArowIndex = database.findIndex(row => row[3] === USTAIDOut)
+
+                //If entry exists, update entry info
+                if(USTArowIndex !== -1){
+                    database[USTArowIndex][1] = UTRID
+                    database[USTArowIndex][4] = array[0][1]
+                    database[USTArowIndex][5] = array[1][1]
+
+                    //Remove no UTR data flag
+                    if(array[0][1] !== 0 && array[1][1] !== 0){
+                        for(let tempIndex = 0; tempIndex < database[USTArowIndex][10].length; tempIndex++){
+                            if(database[USTArowIndex][10][tempIndex] == "No UTR Data"){
+                                database[USTArowIndex][10].splice(tempIndex, 1)
+                            }
+                        }
+                    }
+                }
+
+                //Otherwise create new entry and push to database
+                else{
+                    item[4] = array[0][1]
+                    item[5] = array[1][1]
+                    item[8] = array[4][1]
+                    item[9] = array[5][1]
+                    item[3] = USTAIDOut
+                }
+            }
+            //If no USTA data found, update item to reflect changes
+            else{
+                item[10].push("No USTA Data")
+                item[8] = array[4][1]
+                item[9] = array[5][1]
+            }
+
+            //Push the final item to database
+            database.push(item)
+        }
+        //If no UTR data, update item and push to database with appropriate flag
+        else{
+            item[10].push("No UTR Data")
+            item[4] = array[0][1]
+            item[5] = array[1][1]
+            item[6] = array[2][1]
+            item[7] = array[3][1]
+            item[8] = array[4][1]
+            item[9] = array[5][1]
+            database.push(item)
+        }
+    }
+    await saveDatabasePlayers(database)
+    console.log("Finished checking and updating database")
+    return array
+}
+
+//Update to work with USTA
+export async function checkAndUpdateDatabasePlayersITF(Name, ITFID) {
+    let database = await loadDatabasePlayers()
+
+    // Find the index of the row that contains the UTRID
+    let rowIndex = database.findIndex(row => row[1] === ITFID);
+
+    let array = [["UTR Singles Rating"], ["UTR Doubles Rating"], ["ITF Singles Rating"], ["ITF Doubles Rating"], ["USTA Singles Rating"], ["USTA Doubles Rating"]]
+    console.log("Starting database checking and update")
+    if (rowIndex !== -1) {
+        // Access data from existing row
+        let existingRow = database[rowIndex];
+        array[0].push(existingRow[4])
+        array[1].push(existingRow[5])
+        array[2].push(existingRow[6])
+        array[3].push(existingRow[7])
+        array[4].push(existingRow[8])
+        array[5].push(existingRow[9])
+    } else {
+        // If the ID does not exist, append a new row with the name and ID
+        let ITFDataOut = await GetPlayerInfoITFID(ITFID);
+        console.log(Name)
+        console.log(ITFDataOut[0][1])
+
+        //Initialize objects
+        let item = [Name, "NA", ITFID, "NA", 0, 0, 0, 0, 0, 0, []]
+        array[0].push(0)
+        array[1].push(0)
+        array[2].push(0)
+        array[3].push(0)
+        array[4].push(0)
+        array[5].push(0)
+
+        if(ITFDataOut[1].length > 1 && ITFDataOut[2].length > 1){
+            // Add information from ITF if it exists
+            array[2][1] = ITFDataOut[1][1]
+            array[3][1] = ITFDataOut[2][1]
+
+            // Add information from UTR
+            console.log("Starting to find UTR with matching ITF")
+            let UTRDataOut = await GetPlayerInfoUTRmatchingITF(Name, ITFID)
+            console.log("UTR data out")
+            console.log(UTRDataOut)
+
+            // Check if UTR data exists, then update entries if it does exist
+            if(UTRDataOut[1].length > 1 && UTRDataOut[2].length > 1 && UTRDataOut[3].length > 1){
+                UTRIDOut = UTRDataOut[3][1]
+                array[0][1] = UTRDataOut[1][1]
+                array[1][1] = UTRDataOut[2][1]
+
+                //Check to see if database entry for player already exists with UTR and no ITF
+                let UTRrowIndex = database.findIndex(row => row[1] === UTRIDOut)
+
+                //If entry exists, update ITF info and remove no ITF data flag
+                if(UTRrowIndex !== -1){
+                    database[UTRrowIndex][2] = ITFID
+                    database[UTRrowIndex][4] = array[0][1]
+                    database[UTRrowIndex][5] = array[1][1]
+                    if(array[0][1] !== 0 && array[1][1] !== 0){
+                        for(let tempIndex = 0; tempIndex < database[UTRrowIndex][8].length; tempIndex++){
+                            if(database[UTRrowIndex][8][tempIndex] == "No UTR Data"){
+                                database[UTRrowIndex][8].splice(tempIndex, 1)
+                            }
+                        }
+                    }
+                }
+                //Otherwise create new entry and push to database
+                else{
+                    item[4] = array[0][1]
+                    item[5] = array[1][1]
+                    item[6] = array[2][1]
+                    item[7] = array[3][1]
+                    item[1] = UTRIDOut
+                    database.push(item)
+                }
+            }
+            // Add flag if UTR data doesn't exist
+            else{
+                item[10].push("No UTR Data")
+                item[4] = array[0][1]
+                item[5] = array[1][1]
+                item[6] = array[2][1]
+                item[7] = array[3][1]
+                database.push(item)
+            }
+        }
+
+        else{
+            item[10].push("No ITF Data")
+            item[4] = array[0][1]
+            item[5] = array[1][1]
+            item[6] = array[2][1]
+            item[7] = array[3][1]
+            database.push(item)
+        }
+    }
+    await saveDatabasePlayers(database)
+    console.log("Finished checking and updating database")
+    return array
+}
+
+export async function checkAndUpdateDatabasePlayersUSTA(Name, USTAID){
+    let database = await loadDatabasePlayers()
+
+    // Find the index of the row that contains the UTRID
+    let rowIndex = database.findIndex(row => row[1] === ITFID);
+
+    let array = [["UTR Singles Rating"], ["UTR Doubles Rating"], ["ITF Singles Rating"], ["ITF Doubles Rating"], ["USTA Singles Rating"], ["USTA Doubles Rating"]]
+    console.log("Starting database checking and update")
+    if (rowIndex !== -1) {
+        // Access data from existing row
+        let existingRow = database[rowIndex];
+        array[0].push(existingRow[4])
+        array[1].push(existingRow[5])
+        array[2].push(existingRow[6])
+        array[3].push(existingRow[7])
+        array[4].push(existingRow[8])
+        array[5].push(existingRow[9])
+    } else {
+    
+    // Find USTA User data
+    }
+}
+
+// Find UTR for player by matching existing ITF
+async function GetPlayerInfoUTRmatchingITF(profileName, ITFID){
+    let tempArr = profileName.split(" ");
+    let urlName = "";
+    for (let i = 0; i < tempArr.length; i++){
+        urlName = urlName + tempArr[i].toLowerCase() + "+";
+    }
+    urlName = urlName.substring(0,urlName.length-1);
+
+    const agent = new HttpsProxyAgent(proxyUrl)
+
+    let profileQueryUrlUTR = "https://api.utrsports.net/v2/search?schoolClubSearch=true&query=" + urlName + "&top=10&skip=0";
+
+    const optionsProfileQueryUTR = {
+        "headers": {
+            "accept": "application/json, text/plain, */*",
+            "accept-language": "en-US,en;q=0.9",
+            "sec-ch-ua": "\"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"macOS\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-site",
+            "x-client-name": "buildId - 66730",
+            "Referer": "https://app.utrsports.net/",
+            "Referrer-Policy": "strict-origin-when-cross-origin"
+        },
+        "body": null,
+        "method": "GET",
+        "agent": agent
+    };
+    
+    async function fetchData() {
+        try {
+            const response = await fetch(profileQueryUrlUTR, optionsProfileQueryUTR);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            return data;  // Return the JSON object directly
+        } catch (error) {
+            console.error('There has been a problem with your fetch operation:', error);
+            return null;  // Return null in case of an error
+        }
+    }
+
+    var array = [["Full Name"],["Singles Rating"],["Doubles Rating"],["ID"]];
+
+    console.log("Starting to get UTR information")
+
+    let data = await fetchData();
+    if (data.players.hits.length > 0) {
+        for(let i = 0; i < data.players.hits.length; i++){
+            if(data.players.hits[i].source.displayName.toLowerCase() == profileName.toLowerCase()){
+                let flag = await checkHistoriesITFUTR(ITFID, data.players.hits[i].id)
+                if(flag == true){
+                    array[0].push(data.players.hits[i].source.displayName);
+                    array[1].push(data.players.hits[i].source.singlesUtr);
+                    array[2].push(data.players.hits[i].source.doublesUtr);
+                    array[3].push(data.players.hits[i].id);
+                    return array
+                }
+            }
+        }
+    } else {
+        console.log('No available data');
+    }
+    return array;
+}
+
+// let profileNameUTR = 'juan carlos portilla morales'
+// GetPlayerInfoUTR(profileNameUTR).then(output => {
+//     console.log(output);
+// });
+
+// Fetch profile for ITF ranking which matches UTR
+async function GetPlayerInfoITFmatchingUTR(profileName, UTRID){
+    let tempArr = profileName.split(" ");
+    let urlName = "";
+    for (let i = 0; i < tempArr.length; i++){
+        urlName = urlName + tempArr[i].toLowerCase() + "%20";
+    }
+    urlName = urlName.substring(0,urlName.length-3);
+
+    const agent = new HttpsProxyAgent(proxyUrl)
+
+    let profileQueryUrlITF = "https://www.itftennis.com/tennis/api/SearchApi/Search?searchString=" + urlName;
+
+    const optionsProfileQueryITF = {
+        "headers": {
+            "accept": "*/*",
+            "accept-language": "en-US,en;q=0.9",
+            "if-none-match": "\"db190aaa-e10b-489a-b6be-186123606aff\"",
+            "sec-ch-ua": "\"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"macOS\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "no-cors",
+            "sec-fetch-site": "same-origin",
+            "cookie": "ARRAffinity=1a7aff82bc21373b03d8fda86d009014a254fb43661cd4068b45b28f7aa56160; ARRAffinitySameSite=1a7aff82bc21373b03d8fda86d009014a254fb43661cd4068b45b28f7aa56160; nlbi_178373=WoOlfcKrUX74IcPrtoSRdQAAAAC1EQcYItmH4KWM3N+uQ9TB; visid_incap_178373=Dn8i34OrQ9Ou+Uaqt/HTRZfqQ2YAAAAAQUIPAAAAAADSBShpC3aFKHHfoEmA2SwV; OptanonAlertBoxClosed=2024-05-14T22:50:49.470Z; incap_ses_182_178373=JI+yDui8C3Wgj9VwIJiGAn6VcGYAAAAAHoJCM/aqgDhxq/cqUGR9Ew==; OptanonConsent=isGpcEnabled=0&datestamp=Mon+Jun+17+2024+15%3A59%3A42+GMT-0400+(Eastern+Daylight+Time)&version=6.23.0&isIABGlobal=false&hosts=&consentId=825ca760-103e-4af0-ac75-9af72d02f2a9&interactionCount=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1%2CC0003%3A1%2CC0004%3A1%2CC0005%3A1&geolocation=US%3BNJ&AwaitingReconsent=false"
+        },
+        "referrerPolicy": "no-referrer",
+        "body": null,
+        "method": "GET",
+        "agent": agent
+    };
+
+    async function fetchWithRetry(url, options, retries = 3, backoff = 1000) {
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } 
+        catch (error) {
+            if (retries > 0) {
+                console.error(`Fetch failed: ${error.message}. Retrying in ${backoff}ms...`);
+                await new Promise(resolve => setTimeout(resolve, backoff));
+                return fetchWithRetry(url, options, retries - 1, backoff * 2);
+            } 
+            else {
+                console.error(`Fetch failed after ${retries} retries: ${error.message}`);
+                await new Promise(resolve => setTimeout(resolve, backoff)); // Delay after final failure
+                throw error;
+            }
+        }
+    }
+
+    var array = [["Full Name"],["Singles Rating"],["Doubles Rating"],["ID"]];
+
+    let data = await fetchWithRetry(profileQueryUrlITF, optionsProfileQueryITF);
+    
+    console.log("Starting GetPlayerInfoITF")
+    console.log(data)
+    if(data){
+        if (data.players.length > 0) {
+            for(let integer = 0; integer < data.players.length; integer++){
+                let flag = await checkHistoriesITFUTR(data.players[integer].playerId, UTRID)
+                if(flag == true){
+                    let Id = data.players[integer].playerId;
+                    let prefixes = ["JT", "MT", "FT", "VT", "WCT", "BT"]
+                    for (const prefix of prefixes) {
+                        try {
+                            let dataRankings = await GetPlayerInfoITFID(prefix, Id);
+                            if (dataRankings[1].length > 1 || dataRankings[2].length > 1) {
+                                array[1].push(dataRankings[1][1]);
+                                array[2].push(dataRankings[2][1]);
+                                return array
+                            }
+                            else{
+                                throw "No available data"
+                            }
+                        } 
+                        catch (error) {
+                            console.error(`Failed to fetch data for ${prefix}:`, error.name);
+                            await sleep(10000);
+                        }
+                    }
+                        
+                    if (array[1].length === 0 && array[2].length === 0) {
+                        console.log("No data found");
+                    }
+                }
+            }
+        } else {
+            console.log('No available player data');
+        }
+    }
+    else{
+        console.log("No available data")
+    }
+    
+    return array;
+}
+
+function splitFullName(fullName) {
+    // Trim any extra spaces at the beginning or end
+    fullName = fullName.trim();
+    
+    // Split the name into parts based on spaces
+    const nameParts = fullName.split(/\s+/);
+    
+    // Extract the first name (first part) and last name (last part)
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(" "); // Handles middle names if present
+    
+    return { firstName, lastName };
+}
+
+async function GetPlayerInfoUSTAmatchingUTR(profileName, UTRID){
+    //Fetch info for players with matching full name and then verify with UTR play history
+    const { firstName, lastName } = splitFullName(profileName);
+    let dataOut = await GetPlayerInfoUSTA(firstName, lastName);
+
+    var array = [["Full Name"],["Singles Rating"],["Doubles Rating"],["ID"]];
+
+
+    // Go through matching player ids with the same name, then return data corresponding to the matching player
+    for(let i = 0; i < dataOut.length; i++){
+        let valid = checkHistoriesUTRUSTA(dataOut[i], UTRID);
+        if(valid){
+            let data = GetPlayerInfoUSTAID(dataOut[i]);
+            if(data[0].length > 1){
+                array[0].push(data[0][1])
+            }
+            if(data[1].length > 1){
+                array[1].push(data[1][1])
+            }
+            if(data[2].length > 1){
+                array[2].push(data[2][1])
+            }
+            if(data[3].length > 1){
+                array[3].push(data[3][1])
+            }
+            return array;
+        }
+    }
+    
+    // Message to be printed to console if no data found
+    console.log("No player data found")
+
+    return array;
+}
+
+async function GetPlayerInfoUTRmatchingUSTA(profileName, USTAID){
+    //Fetch info for players with matching full name and then verify with USTA play history
+    let dataOut = GetPlayerInfoUTR(profileName);
+
+    var array = [["Full Name"],["Singles Rating"],["Doubles Rating"],["ID"]];
+
+    //Check if found player matches the player from the UTR function
+    if(dataOut[3].length > 1){
+        let valid = checkHistoriesUTRUSTA(USTAID, dataOut[3][1]);
+        if(valid){
+            array[3].push(dataOut[3][1])
+            if(dataOut[0].length > 1){
+                array[0].push(dataOut[0][1])
+            }
+            if(dataOut[1].length > 1){
+                array[1].push(dataOut[1][1])
+            }
+            if(dataOut[2].length > 1){
+                array[2].push(dataOut[2][1])
+            }   
+            return array;
+        }
+    }
+
+    //If player is not found, print to console
+    console.log("No player data found")
+
+    return array
+}
 
 //Check if player history matches between ITF and UTR
 async function checkHistoriesITFUTR(ITFID, UTRID){
@@ -331,266 +939,6 @@ async function checkHistoriesUTRUSTA(USTAID, UTRID){
     }
     else{
         return false
-    }
-}
-
-async function loadDatabasePlayers() {
-    try {
-        if (fs.existsSync(path)) {
-            // Read the file and parse it as JSON
-            const data = await fs.promises.readFile(path, 'utf8');
-            return JSON.parse(data);
-        }
-    } catch (error) {
-        console.error('Error loading database:', error);
-    }
-    // Return an empty array if the file does not exist
-    return ["Full Name","UTR ID","ITF ID","USTA ID","UTR Singles Rating","UTR Doubles Rating","ITF Singles Rating","ITF Doubles Rating","USTA Singles Rating","USTA Doubles Rating","Flags"];
-    // return [["name","ID"]];
-}
-
-// Function to save the database to disk
-async function saveDatabasePlayers(database) {
-    try {
-        // Convert the array to a JSON string and write it to the file
-        const databaseData = JSON.stringify(database, null, 2);
-        await fs.promises.writeFile(path, databaseData, 'utf8');
-    } catch (error) {
-        console.error('Error saving database:', error);
-    }
-}
-
-// Function to check and update the database
-// Update function to work with USTA
-export async function checkAndUpdateDatabasePlayersUTR(Name, UTRID) {
-    let database = await loadDatabasePlayers()
-
-    // Find the index of the row that contains the UTRID
-    let rowIndex = database.findIndex(row => row[1] === UTRID);
-
-    let array = [["UTR Singles Rating"], ["UTR Doubles Rating"], ["ITF Singles Rating"], ["ITF Doubles Rating"], ["USTA Singles Rating"], ["USTA Doubles Rating"]]
-
-    console.log("Starting database checking and update")
-    console.log(rowIndex)
-    if (rowIndex !== -1) {
-        // Access data from existing row
-        let existingRow = database[rowIndex];
-        array[0].push(existingRow[4])
-        array[1].push(existingRow[5])
-        array[2].push(existingRow[6])
-        array[3].push(existingRow[7])
-        array[4].push(existingRow[8])
-        array[5].push(existingRow[9])
-    } else {
-        // If the ID does not exist, append a new row with the name and ID
-        let UTRDataOut = await GetPlayerUTRbyID(UTRID)
-        console.log(Name)
-        console.log(UTRDataOut[0][1])
-
-        //Temporary values
-        let item = [Name, UTRID, "NA", "NA", 0, 0, 0, 0, 0, 0, []]
-        array[0].push(0)
-        array[1].push(0)
-        array[2].push(0)
-        array[3].push(0)
-        array[4].push(0)
-        array[5].push(0)
-
-        if (UTRDataOut[0].length > 1 && UTRDataOut[0][1] == Name) {
-            console.log("Inner check reached")
-
-            // Get information from UTR
-            console.log("UTR Data Out")
-            console.log(UTRDataOut)
-            // Check if UTR data exists, then update array
-            if(UTRDataOut[1].length > 1 && UTRDataOut[2].length > 1){
-                array[0][1] = UTRDataOut[1][1]
-                array[1][1] = UTRDataOut[2][1]
-            }
-
-            // Get information from ITF
-            console.log("Starting to find ITF with matching UTR")
-            let ITFDataOut = await GetPlayerInfoITFmatchingUTR(Name, UTRID)
-            console.log("ITF Data Out")
-            console.log(ITFDataOut)
-            // Check if ITF Data exists, then update array
-            if(ITFDataOut[1].length > 1 && ITFDataOut[2].length > 1 && ITFDataOut[3].length > 1){
-                ITFIDOut = ITFDataOut[3][1]
-                array[2][1] = ITFDataOut[1][1]
-                array[3][1] = ITFDataOut[2][1]
-
-                //Check to see if database entry for player already exists with ITF and no UTR
-                let ITFrowIndex = database.findIndex(row => row[2] === ITFIDOut)
-
-                //If entry exists, update UTR info and remove no UTR data flag
-                if(ITFrowIndex !== -1){
-                    database[ITFrowIndex][1] = UTRID
-                    database[ITFrowIndex][4] = array[0][1]
-                    database[ITFrowIndex][5] = array[1][1]
-                    if(array[0][1] !== 0 && array[1][1] !== 0){
-                        for(let tempIndex = 0; tempIndex < database[ITFrowIndex][8].length; tempIndex++){
-                            if(database[ITFrowIndex][10][tempIndex] == "No UTR Data"){
-                                database[ITFrowIndex][10].splice(tempIndex, 1)
-                            }
-                        }
-                    }
-                }
-                //Otherwise create new entry and push to database
-                else{
-                    item[4] = array[0][1]
-                    item[5] = array[1][1]
-                    item[6] = array[2][1]
-                    item[7] = array[3][1]
-                    item[2] = ITFIDOut
-                }
-            }
-            //If no ITF data, update item and push to database with appropriate flag
-            else{
-                item[10].push("No ITF Data")
-                item[4] = array[0][1]
-                item[5] = array[1][1]
-                item[6] = array[2][1]
-                item[7] = array[3][1]
-            }
-
-            //Get data from USTA
-        }
-        //If no UTR data, update item and push to database with appropriate flag
-        else{
-            item[10].push("No UTR Data")
-            item[4] = array[0][1]
-            item[5] = array[1][1]
-            item[6] = array[2][1]
-            item[7] = array[3][1]
-            database.push(item)
-        }
-    }
-    await saveDatabasePlayers(database)
-    console.log("Finished checking and updating database")
-    return array
-}
-
-//Update to work with USTA
-export async function checkAndUpdateDatabasePlayersITF(Name, ITFID) {
-    let database = await loadDatabasePlayers()
-
-    // Find the index of the row that contains the UTRID
-    let rowIndex = database.findIndex(row => row[1] === ITFID);
-
-    let array = [["UTR Singles Rating"], ["UTR Doubles Rating"], ["ITF Singles Rating"], ["ITF Doubles Rating"], ["USTA Singles Rating"], ["USTA Doubles Rating"]]
-    console.log("Starting database checking and update")
-    if (rowIndex !== -1) {
-        // Access data from existing row
-        let existingRow = database[rowIndex];
-        array[0].push(existingRow[4])
-        array[1].push(existingRow[5])
-        array[2].push(existingRow[6])
-        array[3].push(existingRow[7])
-        array[4].push(existingRow[8])
-        array[5].push(existingRow[9])
-    } else {
-        // If the ID does not exist, append a new row with the name and ID
-        let ITFDataOut = await GetPlayerInfoITFID(ITFID);
-        console.log(Name)
-        console.log(ITFDataOut[0][1])
-
-        //Initialize objects
-        let item = [Name, "NA", ITFID, "NA", 0, 0, 0, 0, 0, 0, []]
-        array[0].push(0)
-        array[1].push(0)
-        array[2].push(0)
-        array[3].push(0)
-        array[4].push(0)
-        array[5].push(0)
-
-        if(ITFDataOut[1].length > 1 && ITFDataOut[2].length > 1){
-            // Add information from ITF if it exists
-            array[2][1] = ITFDataOut[1][1]
-            array[3][1] = ITFDataOut[2][1]
-
-            // Add information from UTR
-            console.log("Starting to find UTR with matching ITF")
-            let UTRDataOut = await GetPlayerInfoUTRmatchingITF(Name, ITFID)
-            console.log("UTR data out")
-            console.log(UTRDataOut)
-
-            // Check if UTR data exists, then update entries if it does exist
-            if(UTRDataOut[1].length > 1 && UTRDataOut[2].length > 1 && UTRDataOut[3].length > 1){
-                UTRIDOut = UTRDataOut[3][1]
-                array[0][1] = UTRDataOut[1][1]
-                array[1][1] = UTRDataOut[2][1]
-
-                //Check to see if database entry for player already exists with UTR and no ITF
-                let UTRrowIndex = database.findIndex(row => row[1] === UTRIDOut)
-
-                //If entry exists, update ITF info and remove no ITF data flag
-                if(UTRrowIndex !== -1){
-                    database[UTRrowIndex][2] = ITFID
-                    database[UTRrowIndex][4] = array[0][1]
-                    database[UTRrowIndex][5] = array[1][1]
-                    if(array[0][1] !== 0 && array[1][1] !== 0){
-                        for(let tempIndex = 0; tempIndex < database[UTRrowIndex][8].length; tempIndex++){
-                            if(database[UTRrowIndex][8][tempIndex] == "No UTR Data"){
-                                database[UTRrowIndex][8].splice(tempIndex, 1)
-                            }
-                        }
-                    }
-                }
-                //Otherwise create new entry and push to database
-                else{
-                    item[4] = array[0][1]
-                    item[5] = array[1][1]
-                    item[6] = array[2][1]
-                    item[7] = array[3][1]
-                    item[1] = UTRIDOut
-                    database.push(item)
-                }
-            }
-            // Add flag if UTR data doesn't exist
-            else{
-                item[10].push("No UTR Data")
-                item[4] = array[0][1]
-                item[5] = array[1][1]
-                item[6] = array[2][1]
-                item[7] = array[3][1]
-                database.push(item)
-            }
-        }
-
-        else{
-            item[10].push("No ITF Data")
-            item[4] = array[0][1]
-            item[5] = array[1][1]
-            item[6] = array[2][1]
-            item[7] = array[3][1]
-            database.push(item)
-        }
-    }
-    await saveDatabasePlayers(database)
-    console.log("Finished checking and updating database")
-    return array
-}
-
-export async function checkAndUpdateDatabasePlayersUSTA(Name, USTAID){
-    let database = await loadDatabasePlayers()
-
-    // Find the index of the row that contains the UTRID
-    let rowIndex = database.findIndex(row => row[1] === ITFID);
-
-    let array = [["UTR Singles Rating"], ["UTR Doubles Rating"], ["ITF Singles Rating"], ["ITF Doubles Rating"], ["USTA Singles Rating"], ["USTA Doubles Rating"]]
-    console.log("Starting database checking and update")
-    if (rowIndex !== -1) {
-        // Access data from existing row
-        let existingRow = database[rowIndex];
-        array[0].push(existingRow[4])
-        array[1].push(existingRow[5])
-        array[2].push(existingRow[6])
-        array[3].push(existingRow[7])
-        array[4].push(existingRow[8])
-        array[5].push(existingRow[9])
-    } else {
-    
-    // Find USTA User data
     }
 }
 
@@ -822,7 +1170,7 @@ async function GetPlayerInfoITF(profileName, tournCircuitCode){
         "referrerPolicy": "no-referrer",
         "body": null,
         "method": "GET",
-        //"agent": agent
+        "agent": agent
     };
 
     async function fetchWithRetry(url, options, retries = 3, backoff = 1000) {
@@ -908,194 +1256,6 @@ async function GetPlayerInfoITF(profileName, tournCircuitCode){
 // GetPlayerInfoITF(profileNameITF, "JT").then(output => {
 //     console.log(output)
 // });
-
-
-// Find UTR for player by matching existing ITF
-async function GetPlayerInfoUTRmatchingITF(profileName, ITFID){
-    let tempArr = profileName.split(" ");
-    let urlName = "";
-    for (let i = 0; i < tempArr.length; i++){
-        urlName = urlName + tempArr[i].toLowerCase() + "+";
-    }
-    urlName = urlName.substring(0,urlName.length-1);
-
-    const agent = new HttpsProxyAgent(proxyUrl)
-
-    let profileQueryUrlUTR = "https://api.utrsports.net/v2/search?schoolClubSearch=true&query=" + urlName + "&top=10&skip=0";
-
-    const optionsProfileQueryUTR = {
-        "headers": {
-            "accept": "application/json, text/plain, */*",
-            "accept-language": "en-US,en;q=0.9",
-            "sec-ch-ua": "\"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"",
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "\"macOS\"",
-            "sec-fetch-dest": "empty",
-            "sec-fetch-mode": "cors",
-            "sec-fetch-site": "same-site",
-            "x-client-name": "buildId - 66730",
-            "Referer": "https://app.utrsports.net/",
-            "Referrer-Policy": "strict-origin-when-cross-origin"
-        },
-        "body": null,
-        "method": "GET",
-        "agent": agent
-    };
-    
-    async function fetchData() {
-        try {
-            const response = await fetch(profileQueryUrlUTR, optionsProfileQueryUTR);
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            const data = await response.json();
-            return data;  // Return the JSON object directly
-        } catch (error) {
-            console.error('There has been a problem with your fetch operation:', error);
-            return null;  // Return null in case of an error
-        }
-    }
-
-    var array = [["Full Name"],["Singles Rating"],["Doubles Rating"],["ID"]];
-
-    console.log("Starting to get UTR information")
-
-    let data = await fetchData();
-    if (data.players.hits.length > 0) {
-        for(let i = 0; i < data.players.hits.length; i++){
-            if(data.players.hits[i].source.displayName.toLowerCase() == profileName.toLowerCase()){
-                let flag = await checkHistoriesITFUTR(ITFID, data.players.hits[i].id)
-                if(flag == true){
-                    console.log("Match Found")
-                    array[0].push(data.players.hits[i].source.displayName);
-                    array[1].push(data.players.hits[i].source.singlesUtr);
-                    array[2].push(data.players.hits[i].source.doublesUtr);
-                    array[3].push(data.players.hits[i].id);
-                    return array
-                }
-            }
-        }
-    } else {
-        console.log('No available data');
-    }
-    return array;
-}
-
-// let profileNameUTR = 'juan carlos portilla morales'
-// GetPlayerInfoUTR(profileNameUTR).then(output => {
-//     console.log(output);
-// });
-
-// Fetch profile for ITF ranking which matches UTR
-async function GetPlayerInfoITFmatchingUTR(profileName, UTRID){
-    let tempArr = profileName.split(" ");
-    let urlName = "";
-    for (let i = 0; i < tempArr.length; i++){
-        urlName = urlName + tempArr[i].toLowerCase() + "%20";
-    }
-    urlName = urlName.substring(0,urlName.length-3);
-
-    const agent = new HttpsProxyAgent(proxyUrl)
-
-    let profileQueryUrlITF = "https://www.itftennis.com/tennis/api/SearchApi/Search?searchString=" + urlName;
-
-    const optionsProfileQueryITF = {
-        "headers": {
-            "accept": "*/*",
-            "accept-language": "en-US,en;q=0.9",
-            "if-none-match": "\"db190aaa-e10b-489a-b6be-186123606aff\"",
-            "sec-ch-ua": "\"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"",
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "\"macOS\"",
-            "sec-fetch-dest": "empty",
-            "sec-fetch-mode": "no-cors",
-            "sec-fetch-site": "same-origin",
-            "cookie": "ARRAffinity=1a7aff82bc21373b03d8fda86d009014a254fb43661cd4068b45b28f7aa56160; ARRAffinitySameSite=1a7aff82bc21373b03d8fda86d009014a254fb43661cd4068b45b28f7aa56160; nlbi_178373=WoOlfcKrUX74IcPrtoSRdQAAAAC1EQcYItmH4KWM3N+uQ9TB; visid_incap_178373=Dn8i34OrQ9Ou+Uaqt/HTRZfqQ2YAAAAAQUIPAAAAAADSBShpC3aFKHHfoEmA2SwV; OptanonAlertBoxClosed=2024-05-14T22:50:49.470Z; incap_ses_182_178373=JI+yDui8C3Wgj9VwIJiGAn6VcGYAAAAAHoJCM/aqgDhxq/cqUGR9Ew==; OptanonConsent=isGpcEnabled=0&datestamp=Mon+Jun+17+2024+15%3A59%3A42+GMT-0400+(Eastern+Daylight+Time)&version=6.23.0&isIABGlobal=false&hosts=&consentId=825ca760-103e-4af0-ac75-9af72d02f2a9&interactionCount=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1%2CC0003%3A1%2CC0004%3A1%2CC0005%3A1&geolocation=US%3BNJ&AwaitingReconsent=false"
-        },
-        "referrerPolicy": "no-referrer",
-        "body": null,
-        "method": "GET"
-    };
-
-    async function fetchWithRetry(url, options, retries = 3, backoff = 1000) {
-        try {
-            const response = await fetch(url, options);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return await response.json();
-        } 
-        catch (error) {
-            if (retries > 0) {
-                console.error(`Fetch failed: ${error.message}. Retrying in ${backoff}ms...`);
-                await new Promise(resolve => setTimeout(resolve, backoff));
-                return fetchWithRetry(url, options, retries - 1, backoff * 2);
-            } 
-            else {
-                console.error(`Fetch failed after ${retries} retries: ${error.message}`);
-                await new Promise(resolve => setTimeout(resolve, backoff)); // Delay after final failure
-                throw error;
-            }
-        }
-    }
-
-    var array = [["Full Name"],["Singles Rating"],["Doubles Rating"],["ID"]];
-
-    let data = await fetchWithRetry(profileQueryUrlITF, optionsProfileQueryITF);
-    
-    console.log("Starting GetPlayerInfoITF")
-    console.log(data)
-    if(data){
-        if (data.players.length > 0) {
-            for(let integer = 0; integer < data.players.length; integer++){
-                let flag = await checkHistoriesITFUTR(data.players[integer].playerId, UTRID)
-                if(flag == true){
-                    let Id = data.players[integer].playerId;
-                    let prefixes = ["JT", "MT", "FT", "VT", "WCT", "BT"]
-                    for (const prefix of prefixes) {
-                        try {
-                            let dataRankings = await GetPlayerInfoITFID(prefix, Id);
-                            if (dataRankings[1].length > 1 || dataRankings[2].length > 1) {
-                                console.log(`${prefix} singles: ${dataRankings[1][1]}`);
-                                array[1].push(dataRankings[1][1]);
-                                console.log(`${prefix} doubles: ${dataRankings[2][1]}`);
-                                array[2].push(dataRankings[2][1]);
-                                return array
-                            }
-                            else{
-                                throw "No available data"
-                            }
-                        } 
-                        catch (error) {
-                            console.error(`Failed to fetch data for ${prefix}:`, error.name);
-                            await sleep(10000);
-                        }
-                    }
-                        
-                    if (array[1].length === 0 && array[2].length === 0) {
-                        console.log("No data found");
-                    }
-                    
-                }
-            }
-        } else {
-            console.log('No available player data');
-        }
-    }
-    else{
-        console.log("No available data")
-    }
-    
-    return array;
-}
-
-async function GetPlayerInfoUSTAmatchingUTR(profileName, UTRID){
-    //Fetch info for players with matching full name and then verify with UTR play history
-}
-
-async function GetPlayerInfoUTRmatchingUSTA(profileName, USTAID){
-    //Fetch info for players with matching full name and then verify with USTA play history
-}
 
 // Get ITF player info by ID
 async function GetPlayerInfoITFID(circuitCode,ID){
