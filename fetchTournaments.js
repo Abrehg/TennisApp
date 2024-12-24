@@ -33,12 +33,10 @@ function formatDate(date) {
 async function addTournDatabaseEntries(){
 
     // Define a start date (date 1 month previous) (mm/dd/yy for USTA, mm/dd/yyyy for UTR, yyyy-mm-dd for ITF)
-    const previousMonthDate = new Date();
-    previousMonthDate.setMonth(currentDate.getMonth() - 1);
-    if (previousMonthDate.getMonth() === 11) { // Adjust for year wraparound
-        previousMonthDate.setFullYear(currentDate.getFullYear() - 1);
-    }
-    const startDate = formatDate(previousMonthDate);
+    const twoWeeksAgoDate = new Date();
+    twoWeeksAgoDate.setDate(currentDate.getDate() - 14); // Subtract 14 days
+
+    const startDate = formatDate(twoWeeksAgoDate);
     
     // Define an end date (current date) (mm/dd/yy for USTA, mm/dd/yyyy for UTR, yyyy-mm-dd for ITF)
     const currentDate = new Date();
