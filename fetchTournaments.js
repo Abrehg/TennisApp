@@ -1,20 +1,16 @@
 // Import the node-fetch package
 import fetch from 'node-fetch';
-import fs from 'fs';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { checkAndUpdateDatabasePlayersUTR, checkAndUpdateDatabasePlayersITF, checkAndUpdateDatabasePlayersUSTA} from './fetchPlayerInfo.js';
+import { BlobServiceClient } from '@azure/storage-blob';
 
-// Define the path to the database file
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const path = `${__dirname}/tournaments_database.json`;
+// Replace with your Azure Storage account connection string
+const AZURE_STORAGE_CONNECTION_STRING = "Temp string";
+const CONTAINER_NAME = "databases";
+const BLOB_NAME = "tournaments_database.json"; // Replace with your JSON file name
 
 // Define Proxy URL
 const proxyUrl = 'http://brd-customer-hl_74a6dbf2-zone-tortue_tennis_prod_01:vfkrwksemz8m@brd.superproxy.io:22225';
-
-// Functions to automate: updateEntriesTourn(), addTournDatabaseEntries()
 
 function formatDate(date) {
     const year = date.getFullYear();
@@ -30,7 +26,8 @@ function formatDate(date) {
     };
 }
 
-async function addTournDatabaseEntries(){
+//General function to add new tournament entries
+export async function addTournDatabaseEntries(){
 
     // Define a start date (date 1 month previous) (mm/dd/yy for USTA, mm/dd/yyyy for UTR, yyyy-mm-dd for ITF)
     const twoWeeksAgoDate = new Date();
@@ -47,7 +44,8 @@ async function addTournDatabaseEntries(){
     await GetTournamentListITF(startDate["ITF"], endDate["ITF"]);
 }
 
-async function updateDatabaseEntriesTourn(){
+//General function to update values for tournament entries
+export async function updateDatabaseEntriesTourn(){
     let database = await loadDatabaseTournaments()
 
     for(let i = 0; i < database.length; i++){
@@ -1189,31 +1187,62 @@ async function GetAcceptanceListITF(tournamentKey, tournCircuitCode){
 //     console.log(out);
 // });
 
-// Function to load the database from disk
+// Function to read a JSON file from Azure Blob Storage
 async function loadDatabaseTournaments() {
     try {
-        if (fs.existsSync(path)) {
-            // Read the file and parse it as JSON
-            const data = await fs.promises.readFile(path, 'utf8');
-            return JSON.parse(data);
-        }
+        const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+        const containerClient = blobServiceClient.getContainerClient(CONTAINER_NAME);
+        const blobClient = containerClient.getBlobClient(BLOB_NAME);
+  
+        console.log(`Reading blob: ${BLOB_NAME}`);
+  
+        // Download the blob's content
+        const downloadBlockBlobResponse = await blobClient.download(0);
+        const downloadedContent = await streamToString(downloadBlockBlobResponse.readableStreamBody);
+  
+        // Return the parsed JSON content
+        return JSON.parse(downloadedContent);
     } catch (error) {
-        console.error('Error loading database:', error);
+        console.error(`Error reading blob ${BLOB_NAME}:`, error.message);
+        return [["Platform","Tournament Name","Tournament Key","Tournament Surface","Tournament Promo Name","Start Date","End Date","Tennis Category","Host nation","Venue","Indoor or Outdoor","Acceptance List","Average UTR Singles","Min UTR Singles","Max UTR Doubles","Average UTR Doubles","Min UTR Doubles","Max UTR Doubles","Average ITF Singles","Min ITF Singles","Max ITF Doubles","Average ITF Doubles","Min ITF Doubles","Max ITF Doubles","Average USTA Singles","Min USTA Singles","Max USTA Singles","Average USTA Doubles","Min USTA Doubles","Max USTA Doubles","Flags"]];
     }
-    // Return an empty array if the file does not exist
-    return [["Platform","Tournament Name","Tournament Key","Tournament Surface","Tournament Promo Name","Start Date","End Date","Tennis Category","Host nation","Venue","Indoor or Outdoor","Acceptance List","Average UTR Singles","Min UTR Singles","Max UTR Doubles","Average UTR Doubles","Min UTR Doubles","Max UTR Doubles","Average ITF Singles","Min ITF Singles","Max ITF Doubles","Average ITF Doubles","Min ITF Doubles","Max ITF Doubles","Average USTA Singles","Min USTA Singles","Max USTA Singles","Average USTA Doubles","Min USTA Doubles","Max USTA Doubles","Flags"]];
-    // return [["name","ID"]];
 }
 
-// Function to save the database to disk
-async function saveDatabaseTournaments(database) {
+// Function to overwrite a JSON file in Azure Blob Storage
+async function saveDatabaseTournaments(jsonData) {
     try {
-        // Convert the array to a JSON string and write it to the file
-        const data = JSON.stringify(database, null, 2);
-        await fs.promises.writeFile(path, data, 'utf8');
+        // Create a BlobServiceClient
+        const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+
+        // Get a container client
+        const containerClient = blobServiceClient.getContainerClient(CONTAINER_NAME);
+
+        // Ensure the container exists
+        await containerClient.createIfNotExists();
+        console.log(`Container '${CONTAINER_NAME}' is ready.`);
+
+        // Get a block blob client
+        const blockBlobClient = containerClient.getBlockBlobClient(BLOB_NAME);
+
+        // Convert JSON data to string
+        const jsonString = JSON.stringify(jsonData, null, 2);
+
+        // Upload the JSON string to the blob
+        const uploadResponse = await blockBlobClient.upload(jsonString, jsonString.length);
+        console.log(`Blob '${BLOB_NAME}' uploaded successfully.`, uploadResponse);
     } catch (error) {
-        console.error('Error saving database:', error);
+        console.error("Error writing JSON to blob:", error);
     }
+}
+
+// Helper function to read a stream into a string
+async function streamToString(readableStream) {
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        readableStream.on("data", (data) => chunks.push(data.toString()));
+        readableStream.on("end", () => resolve(chunks.join("")));
+        readableStream.on("error", reject);
+    });
 }
 
 // Find average UTR, ITF, and USTA for each tournament (0 for UTR, 1 for ITF, 2 for USTA)

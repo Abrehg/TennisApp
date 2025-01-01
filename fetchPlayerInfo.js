@@ -1,23 +1,24 @@
 // Import the node-fetch package
-import fs from 'fs';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
-import { HttpsProxyAgent } from 'https-proxy-agent'
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import { BlobServiceClient } from '@azure/storage-blob';
 
 // Define Proxy URL
 const proxyUrl = 'http://brd-customer-hl_74a6dbf2-zone-tortue_tennis_testing_01:g4wsac8d9pux@brd.superproxy.io:22225';
 
-// Define the path to the file
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const path = `${__dirname}/players_database.json`;
+// Replace with your Azure Storage account connection string
+const AZURE_STORAGE_CONNECTION_STRING = "Temp string";
+const CONTAINER_NAME = "databases";
+const BLOB_NAME = "players_database.json"; // Replace with your JSON file name
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-//Automate updateDatabaseEntriesPlayers(), update path to players database after creating blob storage
+export async function testPlayersDB(){
+    let database = await loadDatabasePlayers()
+    await saveDatabasePlayers(database)
+}
 
 //Not working, assume it returns an array of strings
 async function getPlayerPlayHistoryUSTA(ID){
@@ -60,7 +61,8 @@ async function getPlayerPlayHistoryUSTA(ID){
 // data = await data.text()
 // console.log(data)
 
-async function updateDatabaseEntriesPlayers(){
+//General function to update each entry in players database
+export async function updateDatabaseEntriesPlayers(){
     let database = await loadDatabasePlayers()
 
     for(let i = 0; i < database.length; i++){
@@ -151,30 +153,61 @@ async function updateDatabaseEntriesPlayers(){
     await saveDatabasePlayers(database)
 }
 
+// Function to read a JSON file from Azure Blob Storage
 async function loadDatabasePlayers() {
     try {
-        if (fs.existsSync(path)) {
-            // Read the file and parse it as JSON
-            const data = await fs.promises.readFile(path, 'utf8');
-            return JSON.parse(data);
-        }
+        const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+        const containerClient = blobServiceClient.getContainerClient(CONTAINER_NAME);
+        const blobClient = containerClient.getBlobClient(BLOB_NAME);
+
+        console.log(`Reading blob: ${BLOB_NAME}`);
+
+        // Download the blob's content
+        const downloadBlockBlobResponse = await blobClient.download(0);
+        const downloadedContent = await streamToString(downloadBlockBlobResponse.readableStreamBody);
+
+        // Return the parsed JSON content
+        return JSON.parse(downloadedContent);
     } catch (error) {
-        console.error('Error loading database:', error);
+        console.error(`Error reading blob ${BLOB_NAME}:`, error.message);
+        return ["Full Name","UTR ID","ITF ID","USTA ID","UTR Singles Rating","UTR Doubles Rating","ITF Singles Rating","ITF Doubles Rating","USTA Singles Rating","USTA Doubles Rating","Flags"];
     }
-    // Return an empty array if the file does not exist
-    return ["Full Name","UTR ID","ITF ID","USTA ID","UTR Singles Rating","UTR Doubles Rating","ITF Singles Rating","ITF Doubles Rating","USTA Singles Rating","USTA Doubles Rating","Flags"];
-    // return [["name","ID"]];
 }
 
-// Function to save the database to disk
-async function saveDatabasePlayers(database) {
+async function saveDatabasePlayers(jsonData) {
     try {
-        // Convert the array to a JSON string and write it to the file
-        const databaseData = JSON.stringify(database, null, 2);
-        await fs.promises.writeFile(path, databaseData, 'utf8');
+        // Create a BlobServiceClient
+        const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+
+        // Get a container client
+        const containerClient = blobServiceClient.getContainerClient(CONTAINER_NAME);
+
+        // Ensure the container exists
+        await containerClient.createIfNotExists();
+        console.log(`Container '${CONTAINER_NAME}' is ready.`);
+
+        // Get a block blob client
+        const blockBlobClient = containerClient.getBlockBlobClient(BLOB_NAME);
+
+        // Convert JSON data to string
+        const jsonString = JSON.stringify(jsonData, null, 2);
+
+        // Upload the JSON string to the blob
+        const uploadResponse = await blockBlobClient.upload(jsonString, jsonString.length);
+        console.log(`Blob '${BLOB_NAME}' uploaded successfully.`, uploadResponse);
     } catch (error) {
-        console.error('Error saving database:', error);
+        console.error("Error writing JSON to blob:", error);
     }
+}
+
+// Helper function to read a stream into a string
+async function streamToString(readableStream) {
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        readableStream.on("data", (data) => chunks.push(data.toString()));
+        readableStream.on("end", () => resolve(chunks.join("")));
+        readableStream.on("error", reject);
+    });
 }
 
 // Function to check and update the database when encountering UTR player

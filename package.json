@@ -1,19 +1,16 @@
 {
   "name": "tortuetennis",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "description": "",
+  "main": "*/index.js",
   "type": "module",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No tests yet...\""
+  },
   "dependencies": {
-    "jssoup": "^0.0.15",
-    "node-fetch": "^3.3.2",
-    "proxy-agent": "^6.4.0",
-    "puppeteer": "^23.1.0"
+    "@azure/functions": "^4.0.0",
+    "@azure/storage-blob": "^12.26.0",
+    "node-fetch": "^3.3.2"
   }
 }
