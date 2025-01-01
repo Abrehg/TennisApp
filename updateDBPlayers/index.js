@@ -54,8 +54,6 @@ export default async function (context, myTimer) {
 
     context.log('Timer trigger function ran!', timeStamp);
 
-    await testPlayersDB()
-
     updateDatabaseEntriesPlayers()
 
     const randomSchedule = generateRandomCron()

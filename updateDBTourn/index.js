@@ -54,10 +54,8 @@ export default async function (context, myTimer) {
 
     context.log('Timer trigger function ran!', timeStamp);
 
-    await testTournDB()
-
     updateDatabaseEntriesTourn()
-    
+
     const randomSchedule = generateRandomCron();
     updateScheduleInFunctionJson(randomSchedule)
 }
